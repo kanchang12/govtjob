@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+.checkout-wrap{max-width:480px;margin:60px auto;padding:0 24px}
+.checkout-card{background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:36px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:20px}
+.co-title{font-size:1.2rem;font-weight:800}
+.co-plan{background:var(--surface2);border-radius:10px;padding:16px 20px;
+  display:flex;justify-content:space-between;align-items:center}
+.co-plan-name{font-size:.9rem;font-weight:700}
+.co-plan-price{font-size:1.4rem;font-weight:800;color:var(--blue)}
+.co-breakdown{display:flex;flex-direction:column;gap:6px}
+.co-row{display:flex;justify-content:space-between;font-size:.83rem;color:var(--dim)}
+.co-row.total{font-size:.95rem;font-weight:700;color:var(--text);
+  border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
+.co-note{font-size:.78rem;color:var(--dim);text-align:center}
+.co-secure{display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:.75rem;color:var(--dim);margin-top:4px}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-brand"><a href="/">GovtPrep</a></div>
+</nav>
+
+<div class="checkout-wrap">
+  <div class="checkout-card">
+    <div class="co-title">Complete your purchase</div>
+
+    <div class="co-plan">
+      <div class="co-plan-name">{{ plan_name }}</div>
+      <div class="co-plan-price">{{ amount_display }}</div>
+    </div>
+
+    <div class="co-breakdown">
+      <div class="co-row"><span>Subtotal</span><span>{{ subtotal }} INR</span></div>
+      <div class="co-row"><span>GST (18%)</span><span>{{ gst }} INR</span></div>
+      <div class="co-row"><span>Razorpay fee (2%)</span><span>{{ razorpay_fee }} INR</span></div>
+      <div class="co-row total"><span>Total</span><span>{{ total }} INR</span></div>
+    </div>
+
+    <button class="btn-primary btn-full" id="payBtn" onclick="startPayment()">
+      Pay {{ total }} INR with Razorpay
+    </button>
+
+    <div class="co-note">7-day money back guarantee. Cancel anytime.</div>
+    <div class="co-secure">Secured by Razorpay. We never store your payment details.</div>
+  </div>
+</div>
+
+<script>
+const ORDER_ID   = "{{ order_id }}";
+const AMOUNT     = {{ amount_paise }};
+const PLAN       = "{{ plan }}";
+const USER_EMAIL = "{{ user_email }}";
+const USER_NAME  = "{{ display_name }}";
+const RZP_KEY    = "{{ razorpay_key }}";
+
+function startPayment() {
+  document.getElementById('payBtn').disabled = true;
+  document.getElementById('payBtn').textContent = 'Opening payment...';
+
+  const options = {
+    key:         RZP_KEY,
+    amount:      AMOUNT,
+    currency:    "INR",
+    name:        "GovtPrep",
+    description: PLAN === 'monthly' ? 'Monthly Subscription' : 'Mock Test',
+    order_id:    ORDER_ID,
+    prefill:     { email: USER_EMAIL, name: USER_NAME },
+    theme:       { color: "#1a56db" },
+    handler: function(response) {
+      // Verify payment on backend
+      fetch('/api/payment/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          razorpay_order_id:   response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature:  response.razorpay_signature,
+          plan: PLAN
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/payment/success?plan=' + PLAN;
+        } else {
+          window.location.href = '/payment/failed';
+        }
+      });
+    },
+    modal: {
+      ondismiss: function() {
+        document.getElementById('payBtn').disabled = false;
+        document.getElementById('payBtn').textContent = 'Pay {{ total }} INR with Razorpay';
+      }
+    }
+  };
+
+  const rzp = new Razorpay(options);
+  rzp.open();
+}
+</script>
+</body>
+</html>

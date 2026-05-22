@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<title>Pricing - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<style>
+.ph{background:linear-gradient(135deg,#1e3a8a,#1a56db);color:#fff;padding:56px 24px;text-align:center}
+.ph h1{font-size:2rem;font-weight:800;margin-bottom:10px}
+.ph p{opacity:.85;max-width:480px;margin:0 auto;font-size:.95rem}
+.pw{max-width:860px;margin:0 auto;padding:48px 24px 64px;display:flex;flex-direction:column;gap:28px}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.plan{background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:28px 24px;display:flex;flex-direction:column;gap:14px;position:relative;box-shadow:var(--shadow)}
+.plan.featured{border:2px solid var(--blue)}
+.pbadge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:var(--blue);color:#fff;font-size:.7rem;font-weight:700;
+  padding:3px 14px;border-radius:20px;white-space:nowrap}
+.pname{font-size:.78rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.pprice{font-size:2.4rem;font-weight:800;line-height:1}
+.pprice sub{font-size:.85rem;font-weight:400;color:var(--dim)}
+.pbilled{font-size:.75rem;color:var(--dim)}
+.pmargin{font-size:.72rem;color:var(--green);font-weight:600;
+  background:#f0fdf4;padding:4px 10px;border-radius:6px;display:inline-block}
+.pfeatures{flex:1;display:flex;flex-direction:column;gap:8px;
+  border-top:1px solid var(--border);padding-top:14px}
+.pf{font-size:.83rem;display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+.pf::before{content:"✓";color:var(--green);font-weight:700;flex-shrink:0}
+.pf.no::before{content:"✗";color:var(--border)}
+.pf.no{color:var(--dim)}
+.pbtn{display:block;text-align:center;padding:12px;border-radius:8px;
+  font-size:.88rem;font-weight:700;text-decoration:none;border:none;cursor:pointer}
+.pbtn-p{background:var(--blue);color:#fff}
+.pbtn-p:hover{background:#1648c0}
+.pbtn-s{background:var(--surface2);color:var(--text)}
+.pbtn-s:hover{background:#e2e8f0}
+.cost-note{background:var(--surface2);border-radius:10px;padding:16px 20px;font-size:.82rem;color:var(--dim);line-height:1.7}
+.guarantee{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px 20px;text-align:center}
+.faq{display:flex;flex-direction:column;gap:10px}
+.faq-h{font-size:1rem;font-weight:800;margin-bottom:4px}
+.fi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 20px}
+.fiq{font-size:.88rem;font-weight:700;margin-bottom:6px}
+.fia{font-size:.83rem;color:var(--dim);line-height:1.6}
+@media(max-width:640px){.pgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-brand"><a href="/">GovtPrep</a></div>
+  <div class="nav-links">
+    {% if display_name %}
+    <a href="/logout" style="color:var(--dim);font-size:.85rem">Sign out</a>
+    {% else %}
+    <a href="/login">Sign in</a>
+    <a href="/register" class="btn-nav">Get started free</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="ph">
+  <h1>Simple, honest pricing</h1>
+  <p>Pay only for what you use. No hidden charges. Cancel anytime.</p>
+</div>
+
+<div class="pw">
+
+  <div class="pgrid">
+
+    <div class="plan">
+      <div class="pname">Free</div>
+      <div class="pprice">0 <sub>INR</sub></div>
+      <div class="pbilled">Always free</div>
+      <div class="pfeatures">
+        <div class="pf">5 practice questions per day</div>
+        <div class="pf">All 12 exams</div>
+        <div class="pf">AI explanations</div>
+        <div class="pf no">Mock tests</div>
+        <div class="pf no">Progress tracking</div>
+        <div class="pf no">Leaderboard</div>
+      </div>
+      <a href="/register" class="pbtn pbtn-s">Start free</a>
+    </div>
+
+    <div class="plan featured">
+      <div class="pbadge">Best value</div>
+      <div class="pname">Monthly</div>
+      <div class="pprice">320 <sub>INR/mo</sub></div>
+      <div class="pbilled">Cancel anytime. No lock-in.</div>
+      <div class="pfeatures">
+        <div class="pf">Unlimited practice questions</div>
+        <div class="pf">All 12 exams and 75+ topics</div>
+        <div class="pf">Full AI explanations</div>
+        <div class="pf">Unlimited mock tests</div>
+        <div class="pf">Progress tracking and weak area analysis</div>
+        <div class="pf">Leaderboard ranking</div>
+      </div>
+      <a href="/checkout?plan=monthly" class="pbtn pbtn-p">Subscribe — 320 INR/mo</a>
+    </div>
+
+    <div class="plan">
+      <div class="pname">Pay per test</div>
+      <div class="pprice">89 <sub>INR</sub></div>
+      <div class="pbilled">Per mock test. No subscription.</div>
+      <div class="pfeatures">
+        <div class="pf">One full mock test</div>
+        <div class="pf">Timed — real exam conditions</div>
+        <div class="pf">Full score and rank</div>
+        <div class="pf">Answer breakdown</div>
+        <div class="pf no">Practice questions</div>
+        <div class="pf no">Progress tracking</div>
+      </div>
+      <a href="/checkout?plan=mocktest" class="pbtn pbtn-s">Buy a mock test</a>
+    </div>
+
+  </div>
+
+  <div class="cost-note">
+    <strong>Why 320 INR?</strong> Our actual cost per active user per month — Gemini AI API + server + database — is under 11 INR.
+    The rest goes into building better questions, more exams, and keeping the platform running. No investor money, no VC pressure. Just a product that has to earn its keep.
+  </div>
+
+  <div class="guarantee">
+    <strong style="color:var(--green)">7-day money back guarantee.</strong>
+    Not happy? Email us. Full refund. No questions asked.
+  </div>
+
+  <div>
+    <div class="faq-h">Common questions</div>
+  </div>
+  <div class="faq">
+    <div class="fi">
+      <div class="fiq">Are the questions real exam questions?</div>
+      <div class="fia">Generated by Google Gemini AI trained on thousands of real IBPS, SBI, SSC and RBI papers. Fresh questions every session — not recycled PDFs. Pattern, difficulty and style match the real exam exactly.</div>
+    </div>
+    <div class="fi">
+      <div class="fiq">Which exams are covered?</div>
+      <div class="fia">IBPS PO, IBPS Clerk, SBI PO, SSC CGL, RBI Grade B, RRB NTPC, LIC AAO, NABARD, SEBI Grade A, Income Tax Inspector, and Other Exams.</div>
+    </div>
+    <div class="fi">
+      <div class="fiq">What payment methods?</div>
+      <div class="fia">UPI, debit card, credit card, net banking — all major Indian payment methods via Razorpay. Secure. Instant.</div>
+    </div>
+    <div class="fi">
+      <div class="fiq">Can I cancel my subscription?</div>
+      <div class="fia">Yes. Cancel from your account settings any time. You keep access until the end of the billing period.</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

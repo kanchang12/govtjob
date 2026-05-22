@@ -428,3 +428,114 @@ def admin_leaderboard():
     return render_template("leaderboard.html", entries=entries,
                            exams=CURRICULUM["exams"], selected_exam="",
                            display_name="Admin")
+
+# ── Payment routes ─────────────────────────────────────────────
+
+import razorpay
+import hmac
+import hashlib
+
+RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
+PLANS = {
+    "monthly": {
+        "name":       "Monthly Subscription",
+        "subtotal":   320,
+        "gst":        round(320 * 0.18, 2),
+        "razorpay_fee": round(320 * 0.02, 2),
+    },
+    "mocktest": {
+        "name":       "Mock Test (single)",
+        "subtotal":   89,
+        "gst":        round(89 * 0.18, 2),
+        "razorpay_fee": round(89 * 0.02, 2),
+    }
+}
+
+def get_plan_total(plan_key):
+    p = PLANS[plan_key]
+    return round(p["subtotal"] + p["gst"] + p["razorpay_fee"], 2)
+
+@app.route("/pricing")
+def pricing():
+    dn = session.get("display_name", "")
+    return render_template("pricing.html", display_name=dn)
+
+@app.route("/checkout")
+@login_required
+def checkout():
+    plan = request.args.get("plan", "monthly")
+    if plan not in PLANS:
+        return redirect(url_for("pricing"))
+
+    p      = PLANS[plan]
+    total  = get_plan_total(plan)
+    # Amount in paise for Razorpay
+    amount_paise = int(total * 100)
+
+    rzp_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+    order = rzp_client.order.create({
+        "amount":   amount_paise,
+        "currency": "INR",
+        "payment_capture": 1
+    })
+
+    u = current_user()
+    return render_template("checkout.html",
+        plan=plan,
+        plan_name=p["name"],
+        subtotal=p["subtotal"],
+        gst=p["gst"],
+        razorpay_fee=p["razorpay_fee"],
+        total=total,
+        amount_display=f"{total} INR",
+        amount_paise=amount_paise,
+        order_id=order["id"],
+        user_email=u.email if u else "",
+        display_name=session.get("display_name", ""),
+        razorpay_key=RAZORPAY_KEY_ID
+    )
+
+@app.route("/api/payment/verify", methods=["POST"])
+@login_required
+def verify_payment():
+    d          = request.json
+    order_id   = d.get("razorpay_order_id", "")
+    payment_id = d.get("razorpay_payment_id", "")
+    signature  = d.get("razorpay_signature", "")
+    plan       = d.get("plan", "monthly")
+
+    # Verify signature
+    msg      = f"{order_id}|{payment_id}".encode()
+    expected = hmac.new(RAZORPAY_KEY_SECRET.encode(), msg, hashlib.sha256).hexdigest()
+
+    if expected != signature:
+        return jsonify({"success": False, "error": "Invalid signature"}), 400
+
+    # TODO: store subscription in Supabase / mark user as paid
+    # For now just return success
+    return jsonify({"success": True, "plan": plan})
+
+@app.route("/payment/success")
+@login_required
+def payment_success():
+    plan = request.args.get("plan", "monthly")
+    return render_template("payment_success.html", plan=plan,
+                           display_name=session.get("display_name", ""))
+
+@app.route("/payment/failed")
+@login_required
+def payment_failed():
+    return render_template("payment_failed.html",
+                           display_name=session.get("display_name", ""))
+
+@app.route("/privacy")
+def privacy():
+    from datetime import date
+    return render_template("privacy.html", date=date.today().strftime("%d %B %Y"))
+
+@app.route("/terms")
+def terms():
+    from datetime import date
+    return render_template("terms.html", date=date.today().strftime("%d %B %Y"))
