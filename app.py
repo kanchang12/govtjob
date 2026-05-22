@@ -10,9 +10,10 @@ from tiers import (get_tier_limits, check_usage_allowed, add_seconds_used,
                    apply_referral, get_referral_code, activate_tier,
                    can_use_mentor, can_use_languages, can_use_percentile,
                    get_subscription, TIER_PRICES)
-from question_bank import (get_practice_questions, get_mock_test_questions,
+from question_bank import (get_questions_for_session, get_mock_test_questions,
                            get_available_mock_tests, get_mentor_feedback,
-                           get_basic_feedback, calculate_percentile)
+                           get_basic_feedback, calculate_percentile,
+                           ensure_mock_test_exists, get_answer)
 
 load_dotenv()
 
@@ -270,7 +271,7 @@ def api_get_questions():
     if not usage["allowed"]:
         return jsonify({"error": "daily_limit", "upgrade_url": "/upgrade?reason=limit"}), 403
 
-    questions = get_practice_questions(exam_id, subject_id, topic_id,
+    questions = get_questions_for_session(exam_id, subject_id, topic_id,
                                        count=10, exclude_ids=exclude, language=lang)
     if not questions:
         return jsonify({"error": "no_questions", "message": "No questions available for this topic yet."}), 404
@@ -323,8 +324,7 @@ def api_answer():
     if not is_correct:
         if can_use_mentor(uid):
             # Get full question for mentor
-            from question_bank import get_question
-            full_q = get_question(question_id, get_user_language(uid))
+            full_q = get_answer(question_id) or {}
             feedback = get_mentor_feedback(full_q, user_answer, uid)
             attempt_row["mentor_feedback"] = feedback
         else:
