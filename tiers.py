@@ -3,7 +3,7 @@ Tier enforcement module.
 All tier logic lives here — app.py just calls these functions.
 """
 import os
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from supabase import create_client
 
 supabase = create_client(os.environ.get("SUPABASE_URL",""),
@@ -30,8 +30,8 @@ def get_subscription(user_id: str) -> dict:
         sub = res.data[0]
         # Check if trial/tier has expired
         if sub["tier_expires_at"]:
-            expires = datetime.fromisoformat(sub["tier_expires_at"].replace("Z",""))
-            if expires < datetime.utcnow() and sub["tier"] in ("trial","tier1","tier2","tier3"):
+            expires = datetime.fromisoformat(sub["tier_expires_at"].replace("Z","+00:00"))
+            if expires < datetime.now(timezone.utc) and sub["tier"] in ("trial","tier1","tier2","tier3"):
                 sub["tier"] = "free"
         return sub
     # Create free subscription on first call
@@ -95,7 +95,7 @@ def apply_referral(referral_code: str, referee_id: str) -> bool:
     if ref["referrer_id"] == referee_id:
         return False  # can't refer yourself
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     bonus = timedelta(days=7)
 
     for uid in [ref["referrer_id"], referee_id]:
@@ -122,7 +122,7 @@ def get_referral_code(user_id: str) -> str:
     return hashlib.md5(user_id.encode()).hexdigest()[:8].upper()
 
 def activate_tier(user_id: str, tier: str, gpay_ref: str):
-    expires = (datetime.utcnow() + timedelta(days=365)).isoformat()
+    expires = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
     supabase.table("subscriptions")\
             .update({"tier": tier, "tier_expires_at": expires, "gpay_ref": gpay_ref})\
             .eq("user_id", user_id).execute()
