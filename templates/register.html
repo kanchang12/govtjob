@@ -2,56 +2,88 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#1a56db">
-<link rel="manifest" href="/manifest.json">
-<title>Register - GovtPrep</title>
-<link rel="stylesheet" href="/static/css/style.css">
+<title>GovtPrep - Register</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#f8fafc;min-height:100vh;display:flex;flex-direction:column}
+.page{display:flex;flex-direction:column;min-height:100vh}
+.top{background:linear-gradient(135deg,#1e3a8a,#1a56db);color:#fff;padding:28px 20px 24px}
+.brand{font-size:1.3rem;font-weight:800;margin-bottom:10px}
+.headline{font-size:1.15rem;font-weight:800;line-height:1.3;margin-bottom:6px}
+.tagline{font-size:.82rem;opacity:.85;line-height:1.5}
+.bottom{flex:1;padding:20px 20px 40px;display:flex;align-items:flex-start;justify-content:center}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;
+  padding:24px;width:100%;max-width:400px;
+  box-shadow:0 4px 16px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:14px}
+.card-title{font-size:1.05rem;font-weight:800;color:#0f172a}
+.card-sub{font-size:.82rem;color:#64748b}
+.card-sub a{color:#1a56db;font-weight:600;text-decoration:none}
+.error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:.82rem}
+.success{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;border-radius:8px;padding:10px 14px;font-size:.82rem}
+.field{display:flex;flex-direction:column;gap:5px}
+.label{font-size:.78rem;font-weight:600;color:#0f172a}
+.hint{font-size:.72rem;color:#94a3b8}
+input{border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;
+  font-size:16px;color:#0f172a;outline:none;width:100%;background:#fff;-webkit-appearance:none}
+input:focus{border-color:#1a56db}
+.btn{background:#1a56db;color:#fff;border:none;border-radius:10px;
+  padding:14px;font-size:.95rem;font-weight:700;cursor:pointer;width:100%;-webkit-appearance:none}
+.btn:active{background:#1648c0}
+.trial-note{background:#eff6ff;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#1e3a8a;text-align:center;font-weight:600}
+</style>
 </head>
 <body>
-<div class="auth-wrap">
-  <div class="auth-left">
-    <div class="auth-brand">GovtPrep</div>
-    <h1 class="auth-headline">Start preparing the right way.</h1>
-    <p class="auth-tagline">Your progress, scores and rank saved. Pick up exactly where you left off.</p>
-    <div class="auth-points">
-      <div class="auth-point">All your sessions tracked</div>
-      <div class="auth-point">Weak areas identified automatically</div>
-      <div class="auth-point">Compete with real users on leaderboard</div>
-      <div class="auth-point">Free to start</div>
-    </div>
+<div class="page">
+  <div class="top">
+    <div class="brand">GovtPrep</div>
+    <div class="headline">Start your 7-day free trial.</div>
+    <div class="tagline">Full access to all features. No credit card needed.</div>
   </div>
 
-  <div class="auth-right">
-    <div class="auth-card">
-      <h2 class="auth-card-title">Create account</h2>
-      <p class="auth-card-sub">Already have an account? <a href="/login" class="auth-link">Sign in</a></p>
+  <div class="bottom">
+    <div class="card">
+      <div class="card-title">Create account</div>
+      <div class="card-sub">Already have an account? <a href="/login">Sign in</a></div>
 
       {% if error %}
-      <div class="auth-error">{{ error }}</div>
+      <div class="error">{{ error }}</div>
       {% endif %}
 
       {% if success %}
-      <div class="auth-success">{{ success }}</div>
-      {% endif %}
-
-      <form method="POST" action="/register">
+      <div class="success">{{ success }}</div>
+      {% else %}
+      <form method="POST" action="/register" style="display:flex;flex-direction:column;gap:12px">
         <div class="field">
-          <label class="field-label">Display name</label>
-          <input type="text" name="display_name" class="field-input"
-                 placeholder="Name shown on leaderboard" required maxlength="30">
+          <label class="label">Display name</label>
+          <input type="text" name="display_name" placeholder="Shown on leaderboard" required maxlength="30" autocomplete="name">
         </div>
         <div class="field">
-          <label class="field-label">Email</label>
-          <input type="email" name="email" class="field-input" placeholder="you@email.com" required>
+          <label class="label">Email</label>
+          <input type="email" name="email" placeholder="you@email.com" required autocomplete="email">
         </div>
         <div class="field">
-          <label class="field-label">Password</label>
-          <input type="password" name="password" class="field-input"
-                 placeholder="At least 6 characters" required minlength="6">
+          <label class="label">Password</label>
+          <input type="password" name="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
         </div>
-        <button type="submit" class="btn-primary btn-full">Create account</button>
+        {% if referral_code %}
+        <div class="field">
+          <label class="label">Referral code</label>
+          <input type="text" name="referral_code" value="{{ referral_code }}" placeholder="Optional">
+          <div class="hint">You and your friend both get 7 extra days free</div>
+        </div>
+        {% else %}
+        <div class="field">
+          <label class="label">Referral code (optional)</label>
+          <input type="text" name="referral_code" placeholder="Have a code? Enter it here">
+        </div>
+        {% endif %}
+        <div class="trial-note">7-day free trial — full access, no card needed</div>
+        <button type="submit" class="btn">Create account</button>
       </form>
+      {% endif %}
     </div>
   </div>
 </div>
