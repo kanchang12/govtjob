@@ -2,7 +2,16 @@ import os
 import json
 from google import genai
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        key = os.environ.get("GEMINI_API_KEY")
+        if not key:
+            raise RuntimeError("GEMINI_API_KEY environment variable is not set")
+        _client = genai.Client(api_key=key)
+    return _client
 
 CURRICULUM_PATH = os.path.join(os.path.dirname(__file__), "curriculum.json")
 with open(CURRICULUM_PATH, encoding="utf-8") as f:
@@ -60,11 +69,10 @@ def ask(exam_id, subject_id, topic_id, stage, history, user_message=None):
     if user_message:
         messages.append({"role": "user", "parts": [{"text": user_message}]})
 
-    # Gemini requires at least one content item
     if not messages:
         messages = [{"role": "user", "parts": [{"text": "Start. Give me question 1 now."}]}]
 
-    response = client.models.generate_content(
+    response = get_client().models.generate_content(
         model="gemini-2.0-flash",
         contents=messages,
         config={
@@ -110,7 +118,7 @@ ANSWER: [letter]
 
 Number Q1 through Q{num_questions}. Real exam difficulty. Indian context. No explanations - this is timed test mode."""
 
-    response = client.models.generate_content(
+    response = get_client().models.generate_content(
         model="gemini-2.0-flash",
         contents=prompt,
         config={"max_output_tokens": 2000, "temperature": 0.9}
