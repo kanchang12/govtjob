@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>My Progress - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-brand"><a href="/">GovtPrep</a></div>
+  <div class="nav-links"><a href="/leaderboard">Leaderboard</a></div>
+  <div class="nav-user"><span class="nav-user-name">{{ display_name }}</span><a href="/logout" class="nav-logout">Sign out</a></div>
+</nav>
+<div class="main-wrap">
+  <h2 class="page-title">My Progress</h2>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num">{{ total_sessions }}</div><div class="stat-lbl">Sessions</div></div>
+    <div class="stat-box"><div class="stat-num">{{ avg_score }}%</div><div class="stat-lbl">Avg Score</div></div>
+    <div class="stat-box"><div class="stat-num">{{ stats|length }}</div><div class="stat-lbl">Topics Tried</div></div>
+  </div>
+
+  {% if weak_topics %}
+  <div class="section">
+    <div class="section-lbl">Weak Areas - focus here</div>
+    {% for st in weak_topics %}
+    <div class="perf-row">
+      <span class="perf-topic">{{ st.topic_id | replace('_',' ') | title }}</span>
+      <div class="perf-bar"><div class="pbar-fill pbar-low" style="width:{{ st.accuracy_pct }}%"></div></div>
+      <span class="perf-pct sc-low">{{ st.accuracy_pct }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if stats %}
+  <div class="section">
+    <div class="section-lbl">All Topic Performance</div>
+    {% for st in stats %}{% if st.attempts_total %}
+    <div class="perf-row">
+      <span class="perf-topic">{{ st.topic_id | replace('_',' ') | title }}</span>
+      <div class="perf-bar">
+        <div class="pbar-fill {{ 'pbar-good' if st.accuracy_pct >= 70 else 'pbar-mid' if st.accuracy_pct >= 50 else 'pbar-low' }}"
+             style="width:{{ st.accuracy_pct }}%"></div>
+      </div>
+      <span class="perf-pct {{ 'sc-good' if st.accuracy_pct >= 70 else 'sc-mid' if st.accuracy_pct >= 50 else 'sc-low' }}">{{ st.accuracy_pct }}%</span>
+    </div>
+    {% endif %}{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if sessions %}
+  <div class="section">
+    <div class="section-lbl">Recent Sessions</div>
+    {% for s in sessions %}
+    <div class="sess-row">
+      <div class="sess-info">
+        <span class="sess-topic">{{ s.topic_id | replace('_',' ') | title if s.topic_id else s.subject_id }}</span>
+        <span class="sess-exam">{{ s.exam_id | replace('_',' ') | upper }}</span>
+      </div>
+      <span class="sess-score {{ 'sc-good' if s.score_pct and s.score_pct >= 70 else 'sc-mid' if s.score_pct and s.score_pct >= 50 else 'sc-low' }}">
+        {{ s.score_pct }}%
+      </span>
+      <span class="sess-date">{{ s.started_at.strftime('%d %b') }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-msg">No sessions yet. Start practising.</p>
+  {% endif %}
+</div>
+</body>
+</html>

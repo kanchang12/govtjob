@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>Login - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-left">
+    <div class="auth-brand">GovtPrep</div>
+    <h1 class="auth-headline">Built by someone who cleared SBI PO.</h1>
+    <p class="auth-tagline">Real exam questions. Timed. Competitive. With full explanations after every answer.</p>
+    <div class="auth-points">
+      <div class="auth-point">60-second timer per question</div>
+      <div class="auth-point">AI explanations — not just answers</div>
+      <div class="auth-point">Live leaderboard across all users</div>
+      <div class="auth-point">IBPS, SBI, SSC, RBI, RRB and more</div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card">
+      <h2 class="auth-card-title">Sign in</h2>
+      <p class="auth-card-sub">Don't have an account? <a href="/register" class="auth-link">Register free</a></p>
+
+      {% if error %}
+      <div class="auth-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="/login">
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input type="email" name="email" class="field-input" placeholder="you@email.com" required autofocus>
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <input type="password" name="password" class="field-input" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="btn-primary btn-full">Sign in</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

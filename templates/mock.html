@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>Mock Test - {{ exam.label }} - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand"><a href="/exam/{{ exam.id }}">{{ exam.label }}</a></div>
+  <div id="mockTimerNav" class="mock-timer-nav" style="display:none">
+    Time left: <span id="mockTime">--:--</span>
+  </div>
+</nav>
+
+<!-- Setup screen -->
+<div class="screen" id="setupScreen">
+  <div class="center-card" style="max-width:500px">
+    <h2 class="card-title">Mock Test - {{ exam.label }}</h2>
+    <p class="card-sub">Timed practice test. No going back on submitted answers.</p>
+
+    {% if leaders %}
+    <div class="mini-board">
+      <div class="mini-board-title">Mock Test Leaderboard</div>
+      {% for l in leaders %}
+      <div class="mini-row">
+        <span class="mini-rank">#{{ loop.index }}</span>
+        <span class="mini-name">{{ l.player_name }}</span>
+        <span class="mini-score">{{ l.score_pct }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="setup-form">
+      <label class="form-label">Your name</label>
+      <input type="text" id="playerName" class="name-input" placeholder="Enter your name" maxlength="30">
+
+      <label class="form-label">Subject</label>
+      <select id="subjectSelect" class="name-input">
+        {% for s in subjects %}
+        <option value="{{ s.id }}">{{ s.label }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="form-label">Number of questions</label>
+      <select id="numQ" class="name-input">
+        <option value="5">5 questions (mini)</option>
+        <option value="10" selected>10 questions</option>
+        <option value="20">20 questions</option>
+        <option value="30">30 questions (full section)</option>
+      </select>
+
+      <button class="btn-primary" style="margin-top:16px" onclick="generateTest()">Generate Test</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading screen -->
+<div class="screen" id="loadScreen" style="display:none">
+  <div class="center-card">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Generating your test questions...</p>
+  </div>
+</div>
+
+<!-- Test screen -->
+<div class="screen" id="testScreen" style="display:none">
+  <div class="mock-wrap">
+    <div class="mock-progress-bar">
+      <div class="mock-progress-fill" id="mockProgressFill"></div>
+    </div>
+
+    <div class="mock-question-area" id="mockArea"></div>
+
+    <div class="mock-nav">
+      <button class="btn-secondary" id="prevBtn" onclick="prevQ()" disabled>Previous</button>
+      <span class="mock-q-count" id="mockQCount"></span>
+      <button class="btn-primary" id="nextBtn" onclick="nextQ()">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result screen -->
+<div class="screen" id="resultScreen" style="display:none">
+  <div class="center-card">
+    <h2 class="card-title">Test Complete</h2>
+    <div class="complete-score" id="resultScore"></div>
+    <div class="complete-rank" id="resultRank"></div>
+    <div class="result-breakdown" id="resultBreakdown"></div>
+    <div class="complete-actions">
+      <button class="btn-primary" onclick="location.reload()">Take Another Test</button>
+      <a href="/exam/{{ exam.id }}" class="btn-secondary">Back to Topics</a>
+      <a href="/leaderboard?exam_id={{ exam.id }}" class="btn-secondary">Leaderboard</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXAM_ID = "{{ exam.id }}";
+
+let questions    = [];
+let answers      = {};
+let currentQ     = 0;
+let totalSecs    = 0;
+let timerInterval= null;
+let playerName   = '';
+let subjectId    = '';
+let testStartTime= null;
+
+async function generateTest() {
+  playerName = document.getElementById('playerName').value.trim() || 'Anonymous';
+  subjectId  = document.getElementById('subjectSelect').value;
+  const numQ = parseInt(document.getElementById('numQ').value);
+  totalSecs  = numQ * 90; // 90 seconds per question for mock
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('loadScreen').style.display  = 'flex';
+
+  const res  = await fetch('/api/mock/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({exam_id: EXAM_ID, subject_id: subjectId, num_questions: numQ})
+  });
+  const data = await res.json();
+
+  parseQuestions(data.questions, numQ);
+  document.getElementById('loadScreen').style.display  = 'none';
+  document.getElementById('testScreen').style.display  = 'flex';
+  document.getElementById('mockTimerNav').style.display = 'flex';
+  testStartTime = Date.now();
+  startMockTimer();
+  renderQ(0);
+}
+
+function parseQuestions(raw, expected) {
+  questions = [];
+  const blocks = raw.split(/\nQ\d+:/).filter(b => b.trim());
+  // Handle first block (Q1: at start)
+  const full = raw;
+  const matches = [...full.matchAll(/Q(\d+):\s*([\s\S]*?)(?=Q\d+:|$)/g)];
+  for (const m of matches) {
+    const body = m[2].trim();
+    const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
+    const qText = lines[0];
+    const opts  = {};
+    let ans = '';
+    for (const l of lines.slice(1)) {
+      if (/^A\)/.test(l)) opts.A = l.replace('A)','').trim();
+      if (/^B\)/.test(l)) opts.B = l.replace('B)','').trim();
+      if (/^C\)/.test(l)) opts.C = l.replace('C)','').trim();
+      if (/^D\)/.test(l)) opts.D = l.replace('D)','').trim();
+      if (/^ANSWER:/.test(l)) ans = l.replace('ANSWER:','').trim()[0];
+    }
+    if (qText && opts.A) questions.push({q: qText, opts, ans});
+  }
+}
+
+function renderQ(idx) {
+  currentQ = idx;
+  const q   = questions[idx];
+  const area = document.getElementById('mockArea');
+  const fill = Math.round(((idx+1)/questions.length)*100);
+  document.getElementById('mockProgressFill').style.width = fill + '%';
+  document.getElementById('mockQCount').textContent = 'Q' + (idx+1) + ' of ' + questions.length;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').textContent = idx === questions.length-1 ? 'Submit Test' : 'Next';
+
+  area.innerHTML = `
+    <div class="mock-q-text">Q${idx+1}. ${escHtml(q.q)}</div>
+    <div class="mock-options">
+      ${['A','B','C','D'].map(l => `
+        <button class="mock-opt ${answers[idx]===l?'selected':''}"
+                onclick="selectAns(${idx},'${l}')">
+          <span class="opt-letter">${l}</span>
+          <span class="opt-text">${escHtml(q.opts[l]||'')}</span>
+        </button>`).join('')}
+    </div>`;
+}
+
+function selectAns(idx, letter) {
+  answers[idx] = letter;
+  renderQ(idx);
+}
+
+function prevQ() { if (currentQ > 0) renderQ(currentQ - 1); }
+
+function nextQ() {
+  if (currentQ < questions.length - 1) {
+    renderQ(currentQ + 1);
+  } else {
+    submitTest();
+  }
+}
+
+async function submitTest() {
+  clearInterval(timerInterval);
+  const elapsed = Math.round((Date.now() - testStartTime) / 1000);
+  let correct = 0;
+  const breakdown = [];
+  questions.forEach((q, i) => {
+    const userAns = answers[i] || 'X';
+    const ok = q.ans && userAns === q.ans;
+    if (ok) correct++;
+    breakdown.push({q: i+1, correct: ok, user: userAns, ans: q.ans});
+  });
+
+  document.getElementById('testScreen').style.display  = 'none';
+  document.getElementById('mockTimerNav').style.display = 'none';
+
+  const res  = await fetch('/api/mock/submit', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({player_name: playerName, exam_id: EXAM_ID,
+                          subject_id: subjectId, correct, total: questions.length,
+                          total_secs: elapsed})
+  });
+  const data = await res.json();
+
+  document.getElementById('resultScore').textContent =
+    correct + ' / ' + questions.length + ' correct (' + data.score_pct + '%)';
+  document.getElementById('resultRank').textContent = 'Your rank: #' + data.rank;
+
+  const bHtml = breakdown.map(b =>
+    `<div class="breakdown-row ${b.correct?'b-correct':'b-wrong'}">
+      Q${b.q}: ${b.correct ? 'Correct' : 'Wrong (you: ' + b.user + ', answer: ' + (b.ans||'?') + ')'}
+    </div>`
+  ).join('');
+  document.getElementById('resultBreakdown').innerHTML = bHtml;
+  document.getElementById('resultScreen').style.display = 'flex';
+}
+
+function startMockTimer() {
+  let left = totalSecs;
+  const el = document.getElementById('mockTime');
+  timerInterval = setInterval(() => {
+    left--;
+    const m = Math.floor(left / 60);
+    const s = left % 60;
+    el.textContent = m + ':' + String(s).padStart(2,'0');
+    if (left <= 60) el.style.color = '#ef4444';
+    if (left <= 0) { clearInterval(timerInterval); submitTest(); }
+  }, 1000);
+}
+
+function escHtml(t) { return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

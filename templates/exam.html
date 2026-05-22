@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>{{ exam.label }} - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand"><a href="/">GovtPrep</a></div>
+  <div class="nav-links">
+    <a href="/leaderboard?exam_id={{ exam.id }}">Leaderboard</a>
+    <a href="/mock/{{ exam.id }}" class="btn-nav">Mock Test</a>
+  </div>
+  <div class="nav-user"><span class="nav-user-name">{{ display_name }}</span><a href="/logout" class="nav-logout">Sign out</a></div>
+</nav>
+
+<div class="main-wrap">
+
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">{{ exam.full_name }}</h2>
+      <p class="page-sub">Select a topic to start timed practice</p>
+    </div>
+    <div class="stage-tabs">
+      {% for stage in exam.stages %}
+      <button class="stage-tab {% if loop.first %}active{% endif %}"
+              onclick="setStage('{{ stage }}', this)">{{ stage }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% for subject in subjects %}
+  <div class="subject-block">
+    <div class="subject-title">{{ subject.label }}</div>
+    <div class="topic-grid">
+      {% for topic in subject.topics %}
+      {% set stat = stats.get(topic.id) %}
+      <a href="/practice/{{ exam.id }}/{{ subject.id }}/{{ topic.id }}"
+         class="topic-card">
+        <div class="topic-name">{{ topic.label }}</div>
+        <div class="topic-bottom">
+          <span class="diff-dots">
+            {% for i in range(topic.difficulty) %}<span class="dot dot-on"></span>{% endfor %}
+            {% for i in range(5 - topic.difficulty) %}<span class="dot"></span>{% endfor %}
+          </span>
+          {% if stat and stat.attempts_total %}
+          <span class="topic-stat {{ 'stat-good' if stat.accuracy_pct >= 70 else 'stat-mid' if stat.accuracy_pct >= 50 else 'stat-low' }}">
+            {{ stat.accuracy_pct }}%
+          </span>
+          {% else %}
+          <span class="topic-stat stat-new">New</span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<script>
+let currentStage = "{{ exam.stages[0] }}";
+function setStage(stage, el) {
+  currentStage = stage;
+  document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('a.topic-card').forEach(a => {
+    const url = new URL(a.href, location.origin);
+    url.searchParams.set('stage', stage);
+    a.href = url.toString();
+  });
+}
+</script>
+</body>
+</html>

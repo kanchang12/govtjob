@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>Register - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-left">
+    <div class="auth-brand">GovtPrep</div>
+    <h1 class="auth-headline">Start preparing the right way.</h1>
+    <p class="auth-tagline">Your progress, scores and rank saved. Pick up exactly where you left off.</p>
+    <div class="auth-points">
+      <div class="auth-point">All your sessions tracked</div>
+      <div class="auth-point">Weak areas identified automatically</div>
+      <div class="auth-point">Compete with real users on leaderboard</div>
+      <div class="auth-point">Free to start</div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card">
+      <h2 class="auth-card-title">Create account</h2>
+      <p class="auth-card-sub">Already have an account? <a href="/login" class="auth-link">Sign in</a></p>
+
+      {% if error %}
+      <div class="auth-error">{{ error }}</div>
+      {% endif %}
+
+      {% if success %}
+      <div class="auth-success">{{ success }}</div>
+      {% endif %}
+
+      <form method="POST" action="/register">
+        <div class="field">
+          <label class="field-label">Display name</label>
+          <input type="text" name="display_name" class="field-input"
+                 placeholder="Name shown on leaderboard" required maxlength="30">
+        </div>
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input type="email" name="email" class="field-input" placeholder="you@email.com" required>
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <input type="password" name="password" class="field-input"
+                 placeholder="At least 6 characters" required minlength="6">
+        </div>
+        <button type="submit" class="btn-primary btn-full">Create account</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

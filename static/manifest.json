@@ -1,0 +1,14 @@
+{
+  "name": "GovtPrep - AI Exam Coach",
+  "short_name": "GovtPrep",
+  "description": "AI-powered preparation for IBPS, SBI, SSC, RBI, UPSC and more. Built by an SBI PO.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#1a56db",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+  <div class="auth-card" style="max-width:380px;width:90%">
+    <div style="font-size:1.3rem;font-weight:800;color:var(--blue)">GovtPrep Admin</div>
+    <p style="font-size:.85rem;color:var(--dim)">Restricted access</p>
+    {% if error %}
+    <div class="auth-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/admin/login" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field">
+        <label class="field-label">Admin Email</label>
+        <input type="email" name="email" class="field-input" required autofocus>
+      </div>
+      <div class="field">
+        <label class="field-label">Password</label>
+        <input type="password" name="password" class="field-input" required>
+      </div>
+      <button type="submit" class="btn-primary btn-full">Sign in as Admin</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

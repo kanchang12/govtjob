@@ -1,0 +1,669 @@
+{
+  "app": "GovtPrep",
+  "version": "1.0",
+  "exams": [
+    {
+      "id": "ibps_po",
+      "label": "IBPS PO",
+      "full_name": "IBPS Probationary Officer",
+      "stages": [
+        "Prelims",
+        "Mains"
+      ],
+      "icon": ""
+    },
+    {
+      "id": "sbi_po",
+      "label": "SBI PO",
+      "full_name": "State Bank of India Probationary Officer",
+      "stages": [
+        "Prelims",
+        "Mains"
+      ],
+      "icon": ""
+    },
+    {
+      "id": "ibps_clerk",
+      "label": "IBPS Clerk",
+      "full_name": "IBPS Clerical Cadre",
+      "stages": [
+        "Prelims",
+        "Mains"
+      ],
+      "icon": ""
+    },
+    {
+      "id": "ssc_cgl",
+      "label": "SSC CGL",
+      "full_name": "SSC Combined Graduate Level",
+      "stages": [
+        "Tier 1",
+        "Tier 2"
+      ],
+      "icon": ""
+    },
+    {
+      "id": "rbi_grade_b",
+      "label": "RBI Grade B",
+      "full_name": "Reserve Bank of India Grade B Officer",
+      "stages": [
+        "Phase 1",
+        "Phase 2"
+      ],
+      "icon": ""
+    },
+    {
+      "id": "upsc_csat",
+      "label": "UPSC CSAT",
+      "full_name": "UPSC Civil Services Aptitude Test (Paper 2)",
+      "stages": [
+        "Prelims"
+      ],
+      "icon": ""
+    },
+    {
+      "id": "rrb_ntpc",
+      "label": "RRB NTPC",
+      "full_name": "Railway Recruitment Board NTPC",
+      "stages": [
+        "CBT 1",
+        "CBT 2"
+      ]
+    },
+    {
+      "id": "lic_aao",
+      "label": "LIC AAO",
+      "full_name": "LIC Assistant Administrative Officer",
+      "stages": [
+        "Prelims",
+        "Mains"
+      ]
+    },
+    {
+      "id": "nabard",
+      "label": "NABARD",
+      "full_name": "NABARD Grade A and B Officer",
+      "stages": [
+        "Phase 1",
+        "Phase 2"
+      ]
+    },
+    {
+      "id": "sebi_grade_a",
+      "label": "SEBI Grade A",
+      "full_name": "Securities and Exchange Board of India Grade A",
+      "stages": [
+        "Phase 1",
+        "Phase 2"
+      ]
+    },
+    {
+      "id": "income_tax",
+      "label": "Income Tax Inspector",
+      "full_name": "Income Tax Inspector via SSC CGL",
+      "stages": [
+        "Tier 1",
+        "Tier 2"
+      ]
+    },
+    {
+      "id": "other",
+      "label": "Other Exams",
+      "full_name": "State PSC, NRA CET, and Other Government Exams",
+      "stages": [
+        "Prelims",
+        "Mains"
+      ]
+    }
+  ],
+  "subjects": [
+    {
+      "id": "quantitative_aptitude",
+      "label": "Quantitative Aptitude",
+      "icon": "",
+      "short": "Quant",
+      "exams": [
+        "ibps_po",
+        "sbi_po",
+        "ibps_clerk",
+        "ssc_cgl",
+        "rbi_grade_b",
+        "upsc_csat",
+        "rrb_ntpc",
+        "lic_aao",
+        "nabard",
+        "sebi_grade_a",
+        "income_tax",
+        "other"
+      ],
+      "topics": [
+        {
+          "id": "number_system",
+          "label": "Number System",
+          "difficulty": 2
+        },
+        {
+          "id": "simplification",
+          "label": "Simplification & Approximation",
+          "difficulty": 2
+        },
+        {
+          "id": "percentage",
+          "label": "Percentage",
+          "difficulty": 2
+        },
+        {
+          "id": "profit_loss",
+          "label": "Profit and Loss",
+          "difficulty": 2
+        },
+        {
+          "id": "ratio_proportion",
+          "label": "Ratio and Proportion",
+          "difficulty": 2
+        },
+        {
+          "id": "averages",
+          "label": "Averages",
+          "difficulty": 2
+        },
+        {
+          "id": "mixtures_alligation",
+          "label": "Mixtures and Alligation",
+          "difficulty": 3
+        },
+        {
+          "id": "time_work",
+          "label": "Time and Work",
+          "difficulty": 3
+        },
+        {
+          "id": "time_distance",
+          "label": "Time, Speed and Distance",
+          "difficulty": 3
+        },
+        {
+          "id": "pipes_cisterns",
+          "label": "Pipes and Cisterns",
+          "difficulty": 3
+        },
+        {
+          "id": "simple_interest",
+          "label": "Simple Interest",
+          "difficulty": 2
+        },
+        {
+          "id": "compound_interest",
+          "label": "Compound Interest",
+          "difficulty": 3
+        },
+        {
+          "id": "data_interpretation",
+          "label": "Data Interpretation",
+          "difficulty": 4
+        },
+        {
+          "id": "quadratic_equations",
+          "label": "Quadratic Equations",
+          "difficulty": 3
+        },
+        {
+          "id": "number_series",
+          "label": "Number Series",
+          "difficulty": 3
+        },
+        {
+          "id": "permutation_combination",
+          "label": "Permutation & Combination",
+          "difficulty": 4
+        },
+        {
+          "id": "probability",
+          "label": "Probability",
+          "difficulty": 4
+        },
+        {
+          "id": "mensuration",
+          "label": "Mensuration",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "reasoning",
+      "label": "Reasoning Ability",
+      "icon": "",
+      "short": "Reasoning",
+      "exams": [
+        "ibps_po",
+        "sbi_po",
+        "ibps_clerk",
+        "ssc_cgl",
+        "rbi_grade_b",
+        "upsc_csat",
+        "rrb_ntpc",
+        "lic_aao",
+        "nabard",
+        "sebi_grade_a",
+        "income_tax",
+        "other"
+      ],
+      "topics": [
+        {
+          "id": "syllogism",
+          "label": "Syllogism",
+          "difficulty": 2
+        },
+        {
+          "id": "coding_decoding",
+          "label": "Coding-Decoding",
+          "difficulty": 2
+        },
+        {
+          "id": "blood_relations",
+          "label": "Blood Relations",
+          "difficulty": 2
+        },
+        {
+          "id": "direction_sense",
+          "label": "Direction Sense",
+          "difficulty": 2
+        },
+        {
+          "id": "inequalities",
+          "label": "Inequalities",
+          "difficulty": 2
+        },
+        {
+          "id": "seating_arrangement",
+          "label": "Seating Arrangement",
+          "difficulty": 4
+        },
+        {
+          "id": "puzzles",
+          "label": "Puzzles",
+          "difficulty": 4
+        },
+        {
+          "id": "input_output",
+          "label": "Input-Output",
+          "difficulty": 3
+        },
+        {
+          "id": "alphanumeric_series",
+          "label": "Alphanumeric Series",
+          "difficulty": 2
+        },
+        {
+          "id": "order_ranking",
+          "label": "Order and Ranking",
+          "difficulty": 2
+        },
+        {
+          "id": "data_sufficiency",
+          "label": "Data Sufficiency",
+          "difficulty": 3
+        },
+        {
+          "id": "critical_reasoning",
+          "label": "Critical Reasoning",
+          "difficulty": 4
+        },
+        {
+          "id": "verbal_analogies",
+          "label": "Verbal Analogies",
+          "difficulty": 2
+        },
+        {
+          "id": "machine_input",
+          "label": "Machine Input-Output",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "english",
+      "label": "English Language",
+      "icon": "",
+      "short": "English",
+      "exams": [
+        "ibps_po",
+        "sbi_po",
+        "ibps_clerk",
+        "ssc_cgl",
+        "rbi_grade_b",
+        "upsc_csat",
+        "rrb_ntpc",
+        "lic_aao",
+        "nabard",
+        "sebi_grade_a",
+        "income_tax",
+        "other"
+      ],
+      "topics": [
+        {
+          "id": "reading_comprehension",
+          "label": "Reading Comprehension",
+          "difficulty": 3
+        },
+        {
+          "id": "cloze_test",
+          "label": "Cloze Test",
+          "difficulty": 2
+        },
+        {
+          "id": "error_spotting",
+          "label": "Error Spotting",
+          "difficulty": 3
+        },
+        {
+          "id": "sentence_correction",
+          "label": "Sentence Correction",
+          "difficulty": 3
+        },
+        {
+          "id": "fill_in_blanks",
+          "label": "Fill in the Blanks",
+          "difficulty": 2
+        },
+        {
+          "id": "para_jumbles",
+          "label": "Para Jumbles",
+          "difficulty": 3
+        },
+        {
+          "id": "vocabulary",
+          "label": "Vocabulary (Synonyms/Antonyms)",
+          "difficulty": 2
+        },
+        {
+          "id": "idioms_phrases",
+          "label": "Idioms and Phrases",
+          "difficulty": 3
+        },
+        {
+          "id": "word_usage",
+          "label": "Word Usage",
+          "difficulty": 2
+        },
+        {
+          "id": "sentence_completion",
+          "label": "Sentence Completion",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "id": "banking_awareness",
+      "label": "Banking & Financial Awareness",
+      "icon": "",
+      "short": "Banking",
+      "exams": [
+        "ibps_po",
+        "sbi_po",
+        "ibps_clerk",
+        "rbi_grade_b",
+        "rrb_ntpc",
+        "lic_aao",
+        "nabard",
+        "sebi_grade_a",
+        "income_tax",
+        "other"
+      ],
+      "topics": [
+        {
+          "id": "rbi_functions",
+          "label": "RBI  Functions & Policies",
+          "difficulty": 3
+        },
+        {
+          "id": "banking_terms",
+          "label": "Banking Terminology",
+          "difficulty": 2
+        },
+        {
+          "id": "financial_inclusion",
+          "label": "Financial Inclusion Schemes",
+          "difficulty": 2
+        },
+        {
+          "id": "monetary_policy",
+          "label": "Monetary Policy & Rates",
+          "difficulty": 3
+        },
+        {
+          "id": "basel_norms",
+          "label": "Basel Norms",
+          "difficulty": 4
+        },
+        {
+          "id": "nbfc",
+          "label": "NBFCs & Microfinance",
+          "difficulty": 3
+        },
+        {
+          "id": "govt_schemes",
+          "label": "Government Banking Schemes",
+          "difficulty": 2
+        },
+        {
+          "id": "international_orgs",
+          "label": "IMF, World Bank, ADB",
+          "difficulty": 3
+        },
+        {
+          "id": "insurance",
+          "label": "Insurance (IRDAI, LIC)",
+          "difficulty": 2
+        },
+        {
+          "id": "capital_markets",
+          "label": "Capital Markets & SEBI",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "general_awareness",
+      "label": "General Awareness",
+      "icon": "",
+      "short": "GK",
+      "exams": [
+        "ibps_po",
+        "sbi_po",
+        "ibps_clerk",
+        "ssc_cgl",
+        "rbi_grade_b",
+        "rrb_ntpc",
+        "lic_aao",
+        "nabard",
+        "sebi_grade_a",
+        "income_tax",
+        "other"
+      ],
+      "topics": [
+        {
+          "id": "current_affairs",
+          "label": "Current Affairs",
+          "difficulty": 3
+        },
+        {
+          "id": "indian_economy",
+          "label": "Indian Economy",
+          "difficulty": 3
+        },
+        {
+          "id": "indian_polity",
+          "label": "Indian Polity & Constitution",
+          "difficulty": 3
+        },
+        {
+          "id": "history",
+          "label": "Modern Indian History",
+          "difficulty": 2
+        },
+        {
+          "id": "geography",
+          "label": "Indian & World Geography",
+          "difficulty": 2
+        },
+        {
+          "id": "science_tech",
+          "label": "Science & Technology",
+          "difficulty": 2
+        },
+        {
+          "id": "sports",
+          "label": "Sports & Awards",
+          "difficulty": 2
+        },
+        {
+          "id": "budget_economy",
+          "label": "Union Budget & Economy",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "computer_knowledge",
+      "label": "Computer Knowledge",
+      "icon": "",
+      "short": "Computer",
+      "exams": [
+        "ibps_po",
+        "sbi_po",
+        "ibps_clerk",
+        "rrb_ntpc",
+        "lic_aao",
+        "nabard",
+        "sebi_grade_a",
+        "income_tax",
+        "other"
+      ],
+      "topics": [
+        {
+          "id": "basics",
+          "label": "Computer Basics & History",
+          "difficulty": 1
+        },
+        {
+          "id": "ms_office",
+          "label": "MS Office",
+          "difficulty": 1
+        },
+        {
+          "id": "networking",
+          "label": "Networking & Internet",
+          "difficulty": 2
+        },
+        {
+          "id": "security",
+          "label": "Cybersecurity Basics",
+          "difficulty": 2
+        },
+        {
+          "id": "database",
+          "label": "Database Concepts",
+          "difficulty": 2
+        },
+        {
+          "id": "shortcut_keys",
+          "label": "Keyboard Shortcuts",
+          "difficulty": 1
+        }
+      ]
+    }
+  ],
+  "mock_test_patterns": {
+    "ibps_po_prelims": {
+      "sections": [
+        {
+          "subject": "english",
+          "questions": 30,
+          "marks": 30,
+          "time_mins": 20
+        },
+        {
+          "subject": "quantitative_aptitude",
+          "questions": 35,
+          "marks": 35,
+          "time_mins": 20
+        },
+        {
+          "subject": "reasoning",
+          "questions": 35,
+          "marks": 35,
+          "time_mins": 20
+        }
+      ],
+      "total_time_mins": 60,
+      "negative_marking": 0.25
+    },
+    "ibps_po_mains": {
+      "sections": [
+        {
+          "subject": "reasoning",
+          "questions": 45,
+          "marks": 60,
+          "time_mins": 60
+        },
+        {
+          "subject": "english",
+          "questions": 35,
+          "marks": 40,
+          "time_mins": 40
+        },
+        {
+          "subject": "quantitative_aptitude",
+          "questions": 35,
+          "marks": 60,
+          "time_mins": 45
+        },
+        {
+          "subject": "general_awareness",
+          "questions": 40,
+          "marks": 40,
+          "time_mins": 35
+        },
+        {
+          "subject": "computer_knowledge",
+          "questions": 45,
+          "marks": 20,
+          "time_mins": 20
+        }
+      ],
+      "total_time_mins": 180,
+      "negative_marking": 0.25
+    },
+    "ssc_cgl_tier1": {
+      "sections": [
+        {
+          "subject": "general_awareness",
+          "questions": 25,
+          "marks": 50,
+          "time_mins": null
+        },
+        {
+          "subject": "reasoning",
+          "questions": 25,
+          "marks": 50,
+          "time_mins": null
+        },
+        {
+          "subject": "quantitative_aptitude",
+          "questions": 25,
+          "marks": 50,
+          "time_mins": null
+        },
+        {
+          "subject": "english",
+          "questions": 25,
+          "marks": 50,
+          "time_mins": null
+        }
+      ],
+      "total_time_mins": 60,
+      "negative_marking": 0.5
+    }
+  }
+}

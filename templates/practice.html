@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>{{ topic.label }} - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand"><a href="/exam/{{ exam.id }}">{{ exam.label }}</a></div>
+  <div class="nav-score">
+    <span id="correct">0</span>/<span id="total">0</span>
+    <span id="scorePct" class="score-pct"></span>
+  </div>
+</nav>
+
+<div class="practice-wrap">
+
+  <!-- Left: chat -->
+  <div class="practice-left">
+
+    <div class="question-timer-bar">
+      <div class="qtimer-label">{{ topic.label }} &middot; {{ exam.label }} {{ stage }}</div>
+      <div class="qtimer-right">
+        <span class="qtimer-count" id="qTimer">60</span>
+        <div class="qtimer-track"><div class="qtimer-fill" id="qTimerFill"></div></div>
+      </div>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+      <div class="loading-msg" id="loadingMsg">Loading your first question...</div>
+    </div>
+
+    <div class="answer-row" id="answerRow" style="display:none">
+      <button class="ans-btn" id="btnA" onclick="submitAnswer('A')">A</button>
+      <button class="ans-btn" id="btnB" onclick="submitAnswer('B')">B</button>
+      <button class="ans-btn" id="btnC" onclick="submitAnswer('C')">C</button>
+      <button class="ans-btn" id="btnD" onclick="submitAnswer('D')">D</button>
+    </div>
+
+  </div>
+
+  <!-- Right: stats sidebar -->
+  <div class="practice-right">
+    <div class="sidebar-card">
+      <div class="sidebar-title">This Topic</div>
+      {% if stat and stat.attempts_total %}
+      <div class="sidebar-row"><span>Total attempts</span><strong>{{ stat.attempts_total }}</strong></div>
+      <div class="sidebar-row"><span>Your accuracy</span>
+        <strong class="{{ 'sc-good' if stat.accuracy_pct >= 70 else 'sc-mid' if stat.accuracy_pct >= 50 else 'sc-low' }}">
+          {{ stat.accuracy_pct }}%
+        </strong>
+      </div>
+      {% if stat.avg_time_secs %}
+      <div class="sidebar-row"><span>Avg time/Q</span><strong>{{ stat.avg_time_secs }}s</strong></div>
+      {% endif %}
+      {% else %}
+      <div class="sidebar-empty">First attempt</div>
+      {% endif %}
+    </div>
+
+    {% if leaders %}
+    <div class="sidebar-card">
+      <div class="sidebar-title">Top Scores</div>
+      {% for l in leaders %}
+      <div class="sidebar-row">
+        <span class="lb-rank">#{{ loop.index }}</span>
+        <span class="lb-score {{ 'sc-good' if l.score_pct >= 70 else 'sc-mid' if l.score_pct >= 50 else 'sc-low' }}">{{ l.score_pct }}%</span>
+        {% if l.avg_time_secs %}<span class="lb-time">{{ l.avg_time_secs }}s</span>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="sidebar-note">Can you beat the top score?</div>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-card" id="sessionCard" style="display:none">
+      <div class="sidebar-title">This Session</div>
+      <div class="sidebar-row"><span>Correct</span><strong id="sCorrect">0</strong></div>
+      <div class="sidebar-row"><span>Answered</span><strong id="sTotal">0</strong></div>
+      <div class="sidebar-row"><span>Score</span><strong id="sPct">-</strong></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Complete overlay -->
+<div class="overlay" id="completeOverlay" style="display:none">
+  <div class="overlay-card">
+    <div class="overlay-title">Session Complete</div>
+    <div class="complete-score" id="completeScore"></div>
+    <div class="complete-rank" id="completeRank"></div>
+    <div class="complete-summary" id="completeSummary"></div>
+    <div class="complete-actions">
+      <button class="btn-primary" onclick="location.reload()">Practice Again</button>
+      <a href="/exam/{{ exam.id }}" class="btn-secondary">Back to Topics</a>
+      <a href="/leaderboard?exam_id={{ exam.id }}" class="btn-secondary">Leaderboard</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXAM_ID    = "{{ exam.id }}";
+const SUBJECT_ID = "{{ subject.id }}";
+const TOPIC_ID   = "{{ topic.id }}";
+const STAGE      = "{{ stage }}";
+
+let sessionId     = null;
+let history       = [];
+let correct       = 0;
+let total         = 0;
+let waiting       = false;
+let questionStart = null;
+let timerInterval = null;
+let timeLeft      = 60;
+
+window.addEventListener('load', startSession);
+
+async function startSession() {
+  const res  = await fetch('/api/session/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({player_name: 'User', exam_id: EXAM_ID,
+                          subject_id: SUBJECT_ID, topic_id: TOPIC_ID, stage: STAGE})
+  });
+  const data = await res.json();
+  sessionId  = data.session_id;
+  document.getElementById('loadingMsg').remove();
+  addMsg('ai', data.response);
+  history.push({role: 'model', content: data.response});
+  if (hasOptions(data.response)) { showOptions(); startTimer(); }
+  if (data.session_complete) showComplete(data.response, null);
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft      = 60;
+  questionStart = Date.now();
+  updateTimerUI();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 0) { clearInterval(timerInterval); submitAnswer('TIMEOUT'); }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const el   = document.getElementById('qTimer');
+  const fill = document.getElementById('qTimerFill');
+  if (el) el.textContent = timeLeft;
+  if (fill) {
+    fill.style.width      = (timeLeft / 60 * 100) + '%';
+    fill.style.background = timeLeft > 20 ? '#1a56db' : timeLeft > 10 ? '#d97706' : '#dc2626';
+  }
+}
+
+async function submitAnswer(letter) {
+  if (waiting) return;
+  clearInterval(timerInterval);
+  waiting = true;
+  const timeSecs = questionStart ? Math.round((Date.now() - questionStart) / 1000) : 60;
+  hideOptions();
+  addMsg('user', letter === 'TIMEOUT' ? 'Time out' : letter);
+  history.push({role: 'user', content: letter === 'TIMEOUT' ? 'I ran out of time' : letter});
+  const typing = addMsg('ai', 'Checking...', true);
+
+  const res  = await fetch('/api/session/message', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: sessionId, message: letter, history, time_secs: timeSecs})
+  });
+  const data = await res.json();
+
+  removeMsg(typing);
+  addMsg('ai', data.response);
+  history.push({role: 'model', content: data.response});
+
+  if (data.score) {
+    correct = data.score.correct;
+    total   = data.score.total;
+    document.getElementById('correct').textContent = correct;
+    document.getElementById('total').textContent   = total;
+    const pct = total ? Math.round(correct/total*100) : 0;
+    if (total) document.getElementById('scorePct').textContent = pct + '%';
+    // Update sidebar
+    document.getElementById('sessionCard').style.display = 'block';
+    document.getElementById('sCorrect').textContent = correct;
+    document.getElementById('sTotal').textContent   = total;
+    document.getElementById('sPct').textContent     = total ? pct + '%' : '-';
+  }
+
+  waiting = false;
+  if (data.session_complete) { showComplete(data.response, data.rank); return; }
+  if (hasOptions(data.response)) { showOptions(); startTimer(); }
+}
+
+function hasOptions(text) { return /\nA\)/.test(text) || text.includes('\nA)'); }
+
+function showOptions() {
+  document.getElementById('answerRow').style.display = 'flex';
+  ['A','B','C','D'].forEach(l => {
+    const b = document.getElementById('btn'+l);
+    b.disabled = false; b.className = 'ans-btn';
+  });
+}
+
+function hideOptions() { document.getElementById('answerRow').style.display = 'none'; }
+
+function addMsg(role, text, isTyping=false) {
+  const box = document.getElementById('chatBox');
+  const div = document.createElement('div');
+  const id  = 'msg' + Date.now() + Math.random();
+  div.id        = id;
+  div.className = 'msg msg-' + role + (isTyping ? ' typing' : '');
+  div.innerHTML = role === 'ai' ? formatAI(text) : esc(text);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return id;
+}
+
+function removeMsg(id) { const e=document.getElementById(id); if(e) e.remove(); }
+function esc(t) { return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatAI(text) {
+  return esc(text)
+    .replace(/^(Q:)/gm,          '<strong class="tag-q">$1</strong>')
+    .replace(/^(ANSWER:)/gm,     '<strong class="tag-ans">$1</strong>')
+    .replace(/^(EXPLANATION:)/gm,'<strong class="tag-exp">$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function showComplete(responseText, rank) {
+  clearInterval(timerInterval);
+  const pct = total ? Math.round(correct/total*100) : 0;
+  document.getElementById('completeScore').textContent =
+    correct + ' / ' + total + ' correct (' + pct + '%)';
+  document.getElementById('completeRank').textContent = rank ? 'Approximate rank: #' + rank + ' on this topic' : '';
+  const lines = responseText.split('\n').filter(l => l.trim() && !l.includes('SESSION_COMPLETE'));
+  document.getElementById('completeSummary').textContent = lines.slice(-4).join('\n').trim();
+  document.getElementById('completeOverlay').style.display = 'flex';
+}
+</script>
+</body>
+</html>

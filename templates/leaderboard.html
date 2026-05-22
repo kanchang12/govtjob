@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>Leaderboard - GovtPrep</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-brand"><a href="/">GovtPrep</a></div>
+  <div class="nav-links"><a href="/progress">My Progress</a></div>
+  <div class="nav-user"><span class="nav-user-name">{{ display_name }}</span><a href="/logout" class="nav-logout">Sign out</a></div>
+</nav>
+
+<div class="main-wrap">
+  <h2 class="page-title">Leaderboard</h2>
+
+  <div class="filter-row">
+    {% for exam in exams %}
+    <a href="/leaderboard?exam_id={{ exam.id }}"
+       class="filter-btn {{ 'active' if selected_exam == exam.id else '' }}">{{ exam.label }}</a>
+    {% endfor %}
+    <a href="/leaderboard" class="filter-btn {{ 'active' if not selected_exam else '' }}">All</a>
+  </div>
+
+  {% if entries %}
+  <div class="board-table">
+    <div class="board-head">
+      <span>Rank</span><span>Name</span><span>Exam</span><span>Topic</span>
+      <span>Score</span><span>Avg Time</span>
+    </div>
+    {% for e in entries %}
+    <div class="board-row {{ 'top1' if loop.index == 1 else 'top2' if loop.index == 2 else 'top3' if loop.index == 3 else '' }}">
+      <span class="board-rank">
+        {% if loop.index == 1 %}1st
+        {% elif loop.index == 2 %}2nd
+        {% elif loop.index == 3 %}3rd
+        {% else %}{{ loop.index }}th{% endif %}
+      </span>
+      <span class="board-name">{{ e.player_name }}</span>
+      <span class="board-exam">{{ e.exam_id | replace('_', ' ') | upper }}</span>
+      <span class="board-topic">{{ (e.topic_id or e.subject_id) | replace('_', ' ') | title }}</span>
+      <span class="board-score {{ 'sc-good' if e.score_pct >= 70 else 'sc-mid' if e.score_pct >= 50 else 'sc-low' }}">
+        {{ e.score_pct }}%
+      </span>
+      <span class="board-time">{{ e.avg_time_secs|round(1) if e.avg_time_secs else '-' }}s</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-msg">No scores yet. Be the first to set a record.</p>
+  {% endif %}
+</div>
+</body>
+</html>

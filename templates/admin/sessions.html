@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessions - Admin</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<style>
+.admin-wrap{max-width:1100px;margin:0 auto;padding:24px}
+.admin-nav{display:flex;align-items:center;justify-content:space-between;
+  background:#fff;border-bottom:1px solid var(--border);padding:0 24px;height:52px;
+  position:sticky;top:0;z-index:100}
+.admin-nav-brand{font-weight:800;color:var(--blue);font-size:1rem}
+.admin-nav-links{display:flex;gap:20px;font-size:.85rem}
+.admin-nav-links a{color:var(--dim);text-decoration:none;font-weight:600}
+.admin-nav-links a.active,.admin-nav-links a:hover{color:var(--blue)}
+.data-table{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.data-table table{width:100%;border-collapse:collapse;font-size:.85rem}
+.data-table th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--dim)}
+.data-table td{padding:10px 14px;border-top:1px solid var(--border)}
+.data-table tr:hover td{background:#f8fafc}
+.section-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);margin-bottom:12px}
+.badge{padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
+.badge-good{background:#f0fdf4;color:var(--green)}
+.badge-mid{background:#fffbeb;color:var(--amber)}
+.badge-low{background:#fef2f2;color:var(--red)}
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:600;color:var(--dim);text-decoration:none}
+.filter-btn.active,.filter-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="admin-nav">
+  <div class="admin-nav-brand">GovtPrep Admin</div>
+  <div class="admin-nav-links">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/users">Users</a>
+    <a href="/admin/sessions" class="active">Sessions</a>
+    <a href="/admin/leaderboard">Leaderboard</a>
+    <a href="/admin/logout" style="color:var(--red)">Sign out</a>
+  </div>
+</div>
+<div class="admin-wrap">
+  <div class="filter-row">
+    <a href="/admin/sessions" class="filter-btn {{ 'active' if not exam_filter else '' }}">All</a>
+    {% for exam in exams %}
+    <a href="/admin/sessions?exam={{ exam.id }}"
+       class="filter-btn {{ 'active' if exam_filter == exam.id else '' }}">{{ exam.label }}</a>
+    {% endfor %}
+  </div>
+  <div class="section-title">{{ sessions|length }} sessions</div>
+  <div class="data-table">
+    <table>
+      <tr><th>User</th><th>Exam</th><th>Topic</th><th>Score</th><th>Q</th><th>Avg Time</th><th>Date</th></tr>
+      {% for s in sessions %}
+      <tr>
+        <td style="font-weight:600">{{ s.player_name }}</td>
+        <td>{{ s.exam_id | replace('_',' ') | upper }}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ s.topic_id | replace('_',' ') | title if s.topic_id else s.subject_id }}</td>
+        <td>
+          {% if s.score_pct %}
+          <span class="badge {{ 'badge-good' if s.score_pct >= 70 else 'badge-mid' if s.score_pct >= 50 else 'badge-low' }}">
+            {{ s.score_pct }}%
+          </span>
+          {% else %}-{% endif %}
+        </td>
+        <td>{{ s.questions_correct }}/{{ s.questions_total }}</td>
+        <td style="color:var(--dim)">{{ s.avg_time_secs|round(1) if s.avg_time_secs else '-' }}s</td>
+        <td style="color:var(--dim);font-size:.78rem">{{ s.started_at.strftime('%d %b %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+</body>
+</html>

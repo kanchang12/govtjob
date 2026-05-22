@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="/manifest.json">
+<title>GovtPrep - AI Exam Coach</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">GovtPrep</div>
+  <div class="nav-links">
+    <a href="/leaderboard">Leaderboard</a>
+    <a href="/progress">Progress</a>
+  </div>
+  <div class="nav-user"><span class="nav-user-name">{{ display_name }}</span><a href="/logout" class="nav-logout">Sign out</a></div>
+</nav>
+
+<div class="hero-section">
+  <div class="hero-inner">
+    <div class="hero-badge">Trusted by aspirants across India</div>
+    <h1 class="hero-title">Crack Your Government Exam<br>with AI-Powered Practice</h1>
+    <p class="hero-story">
+      I cleared SBI PO. I know what actually works inside the exam hall 
+      the question patterns, the traps, the timing pressure. I built this
+      from that hands-on experience. Every question here is exam-accurate.
+      Every explanation is written the way a coach who has been there would write it.
+    </p>
+    <div class="hero-stats">
+      <div class="hstat"><span class="hstat-num">12</span><span class="hstat-label">Exams Covered</span></div>
+      <div class="hstat"><span class="hstat-num">75+</span><span class="hstat-label">Topics</span></div>
+      <div class="hstat"><span class="hstat-num">AI</span><span class="hstat-label">Generated Questions</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="main-wrap">
+
+  <div class="section-head">Choose your exam and start practising</div>
+
+  <div class="exam-grid">
+    {% for exam in exams %}
+    <a href="/exam/{{ exam.id }}" class="exam-card">
+      <div class="exam-name">{{ exam.label }}</div>
+      <div class="exam-full">{{ exam.full_name }}</div>
+      <div class="exam-stages">
+        {% for s in exam.stages %}<span class="stage-tag">{{ s }}</span>{% endfor %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="how-section">
+    <div class="section-head">How it works</div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-num">1</div>
+        <div class="how-title">Pick your exam and topic</div>
+        <div class="how-text">Choose from IBPS, SBI, SSC, RBI, RRB and more. Drill specific topics or take a full mock test.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">2</div>
+        <div class="how-title">Answer under timed pressure</div>
+        <div class="how-text">Every question is timed. You see exactly how long you took. Real exam pace  no shortcuts.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">3</div>
+        <div class="how-title">Get a full explanation</div>
+        <div class="how-text">Not just the answer. Full working for maths. Step-by-step for reasoning. Why each wrong option is wrong.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">4</div>
+        <div class="how-title">Compete on the leaderboard</div>
+        <div class="how-text">Every session is ranked. See where you stand. Beat your own best. Beat others.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+</body>
+</html>
