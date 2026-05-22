@@ -1,22 +1,45 @@
-import os
-import json
+import os, json, hmac, hashlib, random, string
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, send_from_directory, session, redirect, url_for
+from flask import (Flask, request, jsonify, render_template,
+                   send_from_directory, session, redirect, url_for)
 from flask_cors import CORS
 from dotenv import load_dotenv
-from models import db, Session, Attempt, TopicStat, Leaderboard
-from agent import ask, generate_mock_test, CURRICULUM
 from auth import (login_user, register_user, logout_user,
                   login_required, current_user, current_display_name, current_user_id)
+from tiers import (get_tier_limits, check_usage_allowed, add_seconds_used,
+                   apply_referral, get_referral_code, activate_tier,
+                   can_use_mentor, can_use_languages, can_use_percentile,
+                   get_subscription, TIER_PRICES)
+from question_bank import (get_practice_questions, get_mock_test_questions,
+                           get_available_mock_tests, get_mentor_feedback,
+                           get_basic_feedback, calculate_percentile)
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///govtprep.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db.init_app(app)
+
+from supabase import create_client
+db = create_client(os.environ.get("SUPABASE_URL",""),
+                   os.environ.get("SUPABASE_ANON_KEY",""))
+
+CURRICULUM_PATH = os.path.join(os.path.dirname(__file__), "curriculum.json")
+with open(CURRICULUM_PATH, encoding="utf-8") as f:
+    CURRICULUM = json.load(f)
+
+UPI_ID             = os.environ.get("UPI_ID", "")
+GOOGLE_MERCHANT_ID = os.environ.get("GOOGLE_MERCHANT_ID", "")
+ADMIN_EMAIL        = os.environ.get("ADMIN_EMAIL", "")
+ADMIN_PASSWORD     = os.environ.get("ADMIN_PASSWORD", "")
+
+SUPPORTED_LANGUAGES = {
+    "en": "English", "hi": "Hindi",    "bn": "Bengali",
+    "pa": "Punjabi", "ta": "Tamil",    "te": "Telugu",
+    "kn": "Kannada", "ml": "Malayalam","or": "Odia"
+}
 
 def get_subject(subject_id):
     return next((s for s in CURRICULUM["subjects"] if s["id"] == subject_id), {})
@@ -24,61 +47,61 @@ def get_subject(subject_id):
 def get_exam(exam_id):
     return next((e for e in CURRICULUM["exams"] if e["id"] == exam_id), {})
 
-def get_topic_stat(user_id, exam_id, subject_id, topic_id):
-    stat = TopicStat.query.filter_by(user_id=user_id, exam_id=exam_id,
-                                     subject_id=subject_id, topic_id=topic_id).first()
-    if not stat:
-        stat = TopicStat(user_id=user_id, exam_id=exam_id,
-                         subject_id=subject_id, topic_id=topic_id)
-        db.session.add(stat)
-        db.session.commit()
-    return stat
+def get_user_language(uid):
+    sub = get_subscription(uid)
+    lang = sub.get("preferred_language", "en")
+    if lang != "en" and not can_use_languages(uid):
+        return "en"
+    return lang
 
-# ── Auth routes ───────────────────────────────────────────────
+# ── Auth ──────────────────────────────────────────────────────
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["GET","POST"])
 def login_page():
     if session.get("access_token"):
         return redirect(url_for("home"))
     if request.method == "POST":
-        email    = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
+        email    = request.form.get("email","").strip()
+        password = request.form.get("password","")
         try:
             result = login_user(email, password)
             session["access_token"]  = result["access_token"]
             session["refresh_token"] = result["refresh_token"]
             session["display_name"]  = current_display_name()
-            next_url = request.args.get("next", "/")
-            return redirect(next_url)
-        except Exception as e:
+            return redirect(request.args.get("next", "/"))
+        except:
             return render_template("login.html", error="Invalid email or password.")
     return render_template("login.html", error=None)
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=["GET","POST"])
 def register_page():
     if session.get("access_token"):
         return redirect(url_for("home"))
     if request.method == "POST":
-        email        = request.form.get("email", "").strip()
-        password     = request.form.get("password", "")
-        display_name = request.form.get("display_name", "").strip()
+        email        = request.form.get("email","").strip()
+        password     = request.form.get("password","")
+        display_name = request.form.get("display_name","").strip()
+        referral     = request.form.get("referral_code","").strip().upper()
         try:
-            register_user(email, password, display_name)
+            result = register_user(email, password, display_name)
+            # Apply referral if provided
+            if referral and result.get("user"):
+                uid = str(result["user"].id)
+                apply_referral(referral, uid)
             return render_template("register.html", error=None,
-                                   success="Account created! Check your email to confirm, then sign in.")
+                success="Account created! You have 7 days free trial. Check email to confirm, then sign in.")
         except Exception as e:
             err = str(e)
             if "already" in err.lower():
-                err = "An account with this email already exists."
+                err = "Email already registered."
             return render_template("register.html", error=err, success=None)
-    return render_template("register.html", error=None, success=None)
+    ref = request.args.get("ref","")
+    return render_template("register.html", error=None, success=None, referral_code=ref)
 
 @app.route("/logout")
 def logout():
-    try:
-        logout_user()
-    except Exception:
-        pass
+    try: logout_user()
+    except: pass
     session.clear()
     return redirect(url_for("login_page"))
 
@@ -87,85 +110,456 @@ def logout():
 @app.route("/")
 @login_required
 def home():
-    return render_template("home.html", exams=CURRICULUM["exams"],
-                           display_name=session.get("display_name", ""))
+    uid  = current_user_id()
+    sub  = get_subscription(uid)
+    usage = check_usage_allowed(uid)
+    ref_code = get_referral_code(uid)
+    return render_template("home.html",
+        exams=CURRICULUM["exams"],
+        display_name=session.get("display_name",""),
+        tier=sub.get("tier","free"),
+        usage=usage,
+        ref_code=ref_code,
+        ref_link=request.host_url + "register?ref=" + ref_code
+    )
 
 @app.route("/exam/<exam_id>")
 @login_required
 def exam_page(exam_id):
-    exam     = get_exam(exam_id)
-    subjects = [s for s in CURRICULUM["subjects"] if exam_id in s.get("exams", [])]
     uid      = current_user_id()
-    stats    = {}
-    for s in subjects:
-        for t in s.get("topics", []):
-            stat = TopicStat.query.filter_by(user_id=uid, exam_id=exam_id,
-                                             subject_id=s["id"], topic_id=t["id"]).first()
-            stats[t["id"]] = stat
-    return render_template("exam.html", exam=exam, subjects=subjects, stats=stats,
-                           display_name=session.get("display_name", ""))
+    exam     = get_exam(exam_id)
+    subjects = [s for s in CURRICULUM["subjects"] if exam_id in s.get("exams",[])]
+    sub      = get_subscription(uid)
+    return render_template("exam.html", exam=exam, subjects=subjects,
+        display_name=session.get("display_name",""), tier=sub.get("tier","free"))
 
 @app.route("/practice/<exam_id>/<subject_id>/<topic_id>")
 @login_required
 def practice(exam_id, subject_id, topic_id):
+    uid    = current_user_id()
+    usage  = check_usage_allowed(uid)
+    if not usage["allowed"]:
+        return redirect(url_for("upgrade_page", reason="limit"))
     exam    = get_exam(exam_id)
     subject = get_subject(subject_id)
-    topic   = next((t for t in subject.get("topics", []) if t["id"] == topic_id), {})
-    stage   = request.args.get("stage", exam.get("stages", ["Prelims"])[0])
-    uid     = current_user_id()
-    stat    = TopicStat.query.filter_by(user_id=uid, exam_id=exam_id,
-                                        subject_id=subject_id, topic_id=topic_id).first()
-    leaders = Leaderboard.query.filter_by(exam_id=exam_id, subject_id=subject_id,
-                                          topic_id=topic_id)\
-                               .order_by(Leaderboard.score_pct.desc(),
-                                         Leaderboard.avg_time_secs.asc()).limit(5).all()
-    return render_template("practice.html", exam=exam, subject=subject,
-                           topic=topic, stage=stage, stat=stat, leaders=leaders,
-                           display_name=session.get("display_name", ""))
+    topic   = next((t for t in subject.get("topics",[]) if t["id"] == topic_id), {})
+    stage   = request.args.get("stage", exam.get("stages",["Prelims"])[0])
+    lang    = get_user_language(uid)
+    sub     = get_subscription(uid)
+
+    # Top 5 leaderboard for this topic
+    lb = db.table("leaderboard").select("display_name,score_pct,avg_time_secs")\
+           .eq("exam_id", exam_id).eq("subject_id", subject_id)\
+           .eq("topic_id", topic_id)\
+           .order("score_pct", desc=True).limit(5).execute()
+
+    return render_template("practice.html",
+        exam=exam, subject=subject, topic=topic, stage=stage,
+        lang=lang, tier=sub.get("tier","free"),
+        usage=usage, leaders=lb.data or [],
+        display_name=session.get("display_name",""),
+        languages=SUPPORTED_LANGUAGES if can_use_languages(uid) else {"en":"English"}
+    )
 
 @app.route("/mock/<exam_id>")
 @login_required
 def mock_test(exam_id):
+    uid      = current_user_id()
+    usage    = check_usage_allowed(uid)
+    if not usage["allowed"]:
+        return redirect(url_for("upgrade_page", reason="limit"))
     exam     = get_exam(exam_id)
-    subjects = [s for s in CURRICULUM["subjects"] if exam_id in s.get("exams", [])]
-    pattern  = CURRICULUM.get("mock_test_patterns", {}).get(exam_id + "_prelims", {})
-    leaders  = Leaderboard.query.filter_by(exam_id=exam_id, mode="mock")\
-                                .order_by(Leaderboard.score_pct.desc()).limit(10).all()
-    return render_template("mock.html", exam=exam, subjects=subjects,
-                           pattern=pattern, leaders=leaders,
-                           display_name=session.get("display_name", ""))
+    subjects = [s for s in CURRICULUM["subjects"] if exam_id in s.get("exams",[])]
+    sub      = get_subscription(uid)
+    # Load available mock tests
+    mock_tests = {}
+    for s in subjects:
+        tests = get_available_mock_tests(exam_id, s["id"])
+        if tests:
+            mock_tests[s["id"]] = tests
+    lb = db.table("leaderboard").select("display_name,score_pct")\
+           .eq("exam_id", exam_id).eq("mode","mock")\
+           .order("score_pct", desc=True).limit(10).execute()
+    return render_template("mock.html",
+        exam=exam, subjects=subjects, mock_tests=mock_tests,
+        tier=sub.get("tier","free"), usage=usage,
+        leaders=lb.data or [],
+        display_name=session.get("display_name","")
+    )
 
 @app.route("/leaderboard")
 @login_required
 def leaderboard():
-    exam_id = request.args.get("exam_id", "")
+    exam_id = request.args.get("exam_id","")
+    q = db.table("leaderboard").select("*").order("score_pct", desc=True).limit(50)
     if exam_id:
-        entries = Leaderboard.query.filter_by(exam_id=exam_id)\
-                                   .order_by(Leaderboard.score_pct.desc()).limit(50).all()
-    else:
-        entries = Leaderboard.query.order_by(Leaderboard.score_pct.desc()).limit(50).all()
+        q = db.table("leaderboard").select("*").eq("exam_id", exam_id)\
+              .order("score_pct", desc=True).limit(50)
+    entries = q.execute().data or []
     return render_template("leaderboard.html", entries=entries,
-                           exams=CURRICULUM["exams"], selected_exam=exam_id,
-                           display_name=session.get("display_name", ""))
+        exams=CURRICULUM["exams"], selected_exam=exam_id,
+        display_name=session.get("display_name",""))
 
 @app.route("/progress")
 @login_required
 def progress():
-    uid      = current_user_id()
-    sessions = Session.query.filter_by(user_id=uid, completed=True)\
-                            .order_by(Session.started_at.desc()).limit(30).all()
-    stats    = TopicStat.query.filter_by(user_id=uid)\
-                              .order_by(TopicStat.last_attempted.desc()).all()
-    total_q  = sum(s.questions_total   for s in sessions)
-    total_c  = sum(s.questions_correct for s in sessions)
+    uid = current_user_id()
+    sessions = db.table("sessions").select("*").eq("user_id", uid)\
+                 .eq("completed", True).order("started_at", desc=True).limit(30).execute()
+    stats    = db.table("topic_stats").select("*").eq("user_id", uid)\
+                 .order("last_attempted", desc=True).execute()
+    sub      = get_subscription(uid)
+    all_s    = sessions.data or []
+    total_q  = sum(s.get("questions_total",0)   for s in all_s)
+    total_c  = sum(s.get("questions_correct",0) for s in all_s)
     avg_score = round(total_c / total_q * 100, 1) if total_q else 0
-    weak     = sorted([st for st in stats if st.attempts_total >= 3 and st.accuracy_pct < 50],
-                      key=lambda x: x.accuracy_pct)
-    return render_template("progress.html", sessions=sessions, stats=stats,
-                           avg_score=avg_score, total_sessions=len(sessions),
-                           weak_topics=weak[:5], display_name=session.get("display_name", ""))
+    all_stats = stats.data or []
+    weak = sorted([st for st in all_stats
+                   if st.get("attempts_total",0) >= 3 and st.get("accuracy_pct",0) < 50],
+                  key=lambda x: x.get("accuracy_pct",0))
+    return render_template("progress.html",
+        sessions=all_s, stats=all_stats,
+        avg_score=avg_score, total_sessions=len(all_s),
+        weak_topics=weak[:5], tier=sub.get("tier","free"),
+        display_name=session.get("display_name",""))
 
-# ── PWA ──────────────────────────────────────────────────────
+@app.route("/upgrade")
+@login_required
+def upgrade_page():
+    reason = request.args.get("reason","")
+    uid    = current_user_id()
+    sub    = get_subscription(uid)
+    ref_code = get_referral_code(uid)
+    return render_template("upgrade.html",
+        reason=reason, tier=sub.get("tier","free"),
+        tier_prices=TIER_PRICES, ref_code=ref_code,
+        ref_link=request.host_url + "register?ref=" + ref_code,
+        display_name=session.get("display_name",""))
+
+@app.route("/settings", methods=["GET","POST"])
+@login_required
+def settings():
+    uid = current_user_id()
+    sub = get_subscription(uid)
+    if request.method == "POST":
+        lang = request.form.get("language","en")
+        if lang != "en" and not can_use_languages(uid):
+            lang = "en"
+        db.table("subscriptions").update({"preferred_language": lang})\
+          .eq("user_id", uid).execute()
+        return redirect(url_for("settings"))
+    return render_template("settings.html",
+        sub=sub, languages=SUPPORTED_LANGUAGES,
+        can_change_language=can_use_languages(uid),
+        display_name=session.get("display_name",""))
+
+# ── API ───────────────────────────────────────────────────────
+
+@app.route("/api/questions/get", methods=["POST"])
+@login_required
+def api_get_questions():
+    uid  = current_user_id()
+    data = request.json
+    exam_id    = data["exam_id"]
+    subject_id = data["subject_id"]
+    topic_id   = data["topic_id"]
+    exclude    = data.get("exclude_ids", [])
+    lang       = get_user_language(uid)
+
+    usage = check_usage_allowed(uid)
+    if not usage["allowed"]:
+        return jsonify({"error": "daily_limit", "upgrade_url": "/upgrade?reason=limit"}), 403
+
+    questions = get_practice_questions(exam_id, subject_id, topic_id,
+                                       count=10, exclude_ids=exclude, language=lang)
+    if not questions:
+        return jsonify({"error": "no_questions", "message": "No questions available for this topic yet."}), 404
+
+    # Strip correct answer from response
+    safe = []
+    for q in questions:
+        safe.append({
+            "id":         q["id"],
+            "question":   q.get("question",""),
+            "option_a":   q.get("option_a",""),
+            "option_b":   q.get("option_b",""),
+            "option_c":   q.get("option_c",""),
+            "option_d":   q.get("option_d",""),
+            "difficulty": q.get("difficulty", 3)
+        })
+    return jsonify({"questions": safe})
+
+@app.route("/api/answer", methods=["POST"])
+@login_required
+def api_answer():
+    uid  = current_user_id()
+    data = request.json
+    question_id = data["question_id"]
+    user_answer = data["user_answer"].upper()
+    session_id  = data["session_id"]
+    time_secs   = data.get("time_secs", 0)
+
+    # Get correct answer
+    res = db.table("questions").select("correct_answer,explanation_en,topic_id")\
+            .eq("id", question_id).execute()
+    if not res.data:
+        return jsonify({"error": "Question not found"}), 404
+
+    q_data     = res.data[0]
+    is_correct = user_answer == q_data["correct_answer"]
+
+    # Log attempt
+    attempt_row = {
+        "session_id":  session_id,
+        "user_id":     uid,
+        "question_id": question_id,
+        "user_answer": user_answer,
+        "is_correct":  is_correct,
+        "time_secs":   time_secs
+    }
+
+    # Mentor feedback for tier3
+    feedback = ""
+    if not is_correct:
+        if can_use_mentor(uid):
+            # Get full question for mentor
+            from question_bank import get_question
+            full_q = get_question(question_id, get_user_language(uid))
+            feedback = get_mentor_feedback(full_q, user_answer, uid)
+            attempt_row["mentor_feedback"] = feedback
+        else:
+            feedback = get_basic_feedback(q_data.get("topic_id",""))
+
+    db.table("attempts").insert(attempt_row).execute()
+
+    # Update session counts
+    sess = db.table("sessions").select("*").eq("id", session_id).execute()
+    if sess.data:
+        s = sess.data[0]
+        new_total   = s.get("questions_total", 0) + 1
+        new_correct = s.get("questions_correct", 0) + (1 if is_correct else 0)
+        db.table("sessions").update({
+            "questions_total":   new_total,
+            "questions_correct": new_correct
+        }).eq("id", session_id).execute()
+
+    # Update topic stats
+    ts = db.table("topic_stats").select("*").eq("user_id", uid)\
+           .eq("exam_id", data.get("exam_id",""))\
+           .eq("subject_id", data.get("subject_id",""))\
+           .eq("topic_id", q_data.get("topic_id","")).execute()
+    if ts.data:
+        t = ts.data[0]
+        new_total_t = t["attempts_total"] + 1
+        new_correct_t = t["attempts_correct"] + (1 if is_correct else 0)
+        db.table("topic_stats").update({
+            "attempts_total":   new_total_t,
+            "attempts_correct": new_correct_t,
+            "accuracy_pct":     round(new_correct_t/new_total_t*100, 1),
+            "last_attempted":   datetime.utcnow().isoformat()
+        }).eq("id", t["id"]).execute()
+    else:
+        db.table("topic_stats").insert({
+            "user_id":          uid,
+            "exam_id":          data.get("exam_id",""),
+            "subject_id":       data.get("subject_id",""),
+            "topic_id":         q_data.get("topic_id",""),
+            "attempts_total":   1,
+            "attempts_correct": 1 if is_correct else 0,
+            "accuracy_pct":     100.0 if is_correct else 0.0,
+            "last_attempted":   datetime.utcnow().isoformat()
+        }).execute()
+
+    # Add usage time
+    add_seconds_used(uid, int(time_secs))
+
+    return jsonify({
+        "is_correct":     is_correct,
+        "correct_answer": q_data["correct_answer"],
+        "explanation":    q_data["explanation_en"],
+        "feedback":       feedback,
+        "show_mentor":    can_use_mentor(uid)
+    })
+
+@app.route("/api/session/start", methods=["POST"])
+@login_required
+def start_session():
+    uid  = current_user_id()
+    data = request.json
+
+    usage = check_usage_allowed(uid)
+    if not usage["allowed"]:
+        return jsonify({"error": "daily_limit"}), 403
+
+    sess = db.table("sessions").insert({
+        "user_id":    uid,
+        "exam_id":    data["exam_id"],
+        "subject_id": data["subject_id"],
+        "topic_id":   data.get("topic_id"),
+        "mode":       data.get("mode","practice"),
+        "language":   get_user_language(uid)
+    }).execute()
+
+    return jsonify({"session_id": sess.data[0]["id"]})
+
+@app.route("/api/session/complete", methods=["POST"])
+@login_required
+def complete_session():
+    uid  = current_user_id()
+    data = request.json
+    session_id  = data["session_id"]
+    total_secs  = data.get("total_secs", 0)
+
+    sess = db.table("sessions").select("*").eq("id", session_id).execute()
+    if not sess.data:
+        return jsonify({"error": "not found"}), 404
+    s = sess.data[0]
+
+    total_q   = s.get("questions_total", 0)
+    correct_q = s.get("questions_correct", 0)
+    score_pct = round(correct_q / total_q * 100, 1) if total_q else 0
+
+    db.table("sessions").update({
+        "completed":    True,
+        "ended_at":     datetime.utcnow().isoformat(),
+        "score_pct":    score_pct,
+        "duration_secs":total_secs
+    }).eq("id", session_id).execute()
+
+    # Save to leaderboard
+    dname = session.get("display_name","User")
+    lb_row = {
+        "user_id":      uid,
+        "display_name": dname,
+        "exam_id":      s["exam_id"],
+        "subject_id":   s["subject_id"],
+        "topic_id":     s.get("topic_id"),
+        "mock_test_id": s.get("mock_test_id"),
+        "mode":         s.get("mode","practice"),
+        "score_pct":    score_pct,
+        "correct":      correct_q,
+        "total":        total_q,
+        "avg_time_secs": round(total_secs/total_q, 1) if total_q else 0
+    }
+    db.table("leaderboard").insert(lb_row).execute()
+
+    # Percentile
+    percentile = None
+    if can_use_percentile(uid):
+        percentile = calculate_percentile(score_pct, s["exam_id"],
+                                          s["subject_id"], s.get("topic_id"))
+
+    # Rank
+    better = db.table("leaderboard").select("id", count="exact")\
+               .eq("exam_id", s["exam_id"]).eq("subject_id", s["subject_id"])\
+               .gt("score_pct", score_pct).execute()
+    rank = (better.count or 0) + 1
+
+    add_seconds_used(uid, int(total_secs))
+
+    return jsonify({
+        "score_pct":  score_pct,
+        "correct":    correct_q,
+        "total":      total_q,
+        "rank":       rank,
+        "percentile": percentile
+    })
+
+@app.route("/api/mock/questions", methods=["POST"])
+@login_required
+def api_mock_questions():
+    uid  = current_user_id()
+    data = request.json
+    mock_test_id = data["mock_test_id"]
+    lang = get_user_language(uid)
+
+    usage = check_usage_allowed(uid)
+    if not usage["allowed"]:
+        return jsonify({"error": "daily_limit"}), 403
+
+    questions = get_mock_test_questions(mock_test_id, lang)
+    safe = []
+    for q in questions:
+        safe.append({
+            "id":       q["id"],
+            "question": q.get("question",""),
+            "option_a": q.get("option_a",""),
+            "option_b": q.get("option_b",""),
+            "option_c": q.get("option_c",""),
+            "option_d": q.get("option_d",""),
+        })
+    return jsonify({"questions": safe, "total": len(safe)})
+
+@app.route("/api/referral/apply", methods=["POST"])
+@login_required
+def apply_referral_code():
+    uid  = current_user_id()
+    code = request.json.get("code","").strip().upper()
+    if not code:
+        return jsonify({"success": False, "error": "No code provided"}), 400
+    ok = apply_referral(code, uid)
+    if ok:
+        return jsonify({"success": True, "message": "7 days added to both accounts!"})
+    return jsonify({"success": False, "error": "Invalid or already used code"}), 400
+
+@app.route("/api/usage")
+@login_required
+def api_usage():
+    uid = current_user_id()
+    return jsonify(check_usage_allowed(uid))
+
+# ── Payment (GPay) ────────────────────────────────────────────
+
+@app.route("/pricing")
+def pricing():
+    dn = session.get("display_name","")
+    return render_template("pricing.html", display_name=dn, tier_prices=TIER_PRICES)
+
+@app.route("/checkout")
+@login_required
+def checkout():
+    plan = request.args.get("plan","tier1")
+    if plan not in TIER_PRICES:
+        return redirect(url_for("pricing"))
+    p       = TIER_PRICES[plan]
+    base    = p["amount"]
+    gst     = round(base * 0.18, 2)
+    total   = round(base + gst, 2)
+    plan_ref = plan[:2].upper() + ''.join(random.choices(string.digits, k=8))
+    u = current_user()
+    return render_template("checkout.html",
+        plan=plan, plan_name=p["label"],
+        base=base, gst=gst, amount=total, plan_ref=plan_ref,
+        upi_id=UPI_ID, google_merchant_id=GOOGLE_MERCHANT_ID,
+        display_name=session.get("display_name","")
+    )
+
+@app.route("/api/payment/verify", methods=["POST"])
+@login_required
+def verify_payment():
+    uid     = current_user_id()
+    data    = request.json
+    plan    = data.get("plan","tier1")
+    upi_ref = data.get("upi_ref","")
+    print(f"Payment: user={uid} plan={plan} upi_ref={upi_ref}")
+    activate_tier(uid, plan, upi_ref)
+    return jsonify({"success": True, "plan": plan})
+
+@app.route("/payment/success")
+@login_required
+def payment_success():
+    plan = request.args.get("plan","tier1")
+    name = TIER_PRICES.get(plan, {}).get("label","Pro")
+    return render_template("payment_success.html", plan=plan, plan_name=name,
+                           display_name=session.get("display_name",""))
+
+@app.route("/payment/failed")
+@login_required
+def payment_failed():
+    return render_template("payment_failed.html",
+                           display_name=session.get("display_name",""))
+
+# ── PWA and static ────────────────────────────────────────────
 
 @app.route("/manifest.json")
 def manifest():
@@ -175,142 +569,17 @@ def manifest():
 def service_worker():
     return send_from_directory("static", "sw.js")
 
-# ── API ───────────────────────────────────────────────────────
+@app.route("/privacy")
+def privacy():
+    from datetime import date
+    return render_template("privacy.html", date=date.today().strftime("%d %B %Y"))
 
-@app.route("/api/session/start", methods=["POST"])
-@login_required
-def start_session():
-    d          = request.json
-    uid        = current_user_id()
-    dname      = session.get("display_name", "User")
-    exam_id    = d["exam_id"]
-    subject_id = d["subject_id"]
-    topic_id   = d["topic_id"]
-    stage      = d.get("stage", "Prelims")
+@app.route("/terms")
+def terms():
+    from datetime import date
+    return render_template("terms.html", date=date.today().strftime("%d %B %Y"))
 
-    sess = Session(user_id=uid, player_name=dname, exam_id=exam_id,
-                   subject_id=subject_id, topic_id=topic_id, stage=stage, mode="practice")
-    db.session.add(sess)
-    db.session.commit()
-
-    result = ask(exam_id, subject_id, topic_id, stage, [], None)
-    return jsonify({"session_id": sess.id, "response": result["response"],
-                    "session_complete": result["session_complete"]})
-
-@app.route("/api/session/message", methods=["POST"])
-@login_required
-def message():
-    d          = request.json
-    session_id = d["session_id"]
-    user_msg   = d.get("message", "").strip()
-    history    = d.get("history", [])
-    time_secs  = d.get("time_secs")
-    uid        = current_user_id()
-    dname      = session.get("display_name", "User")
-
-    sess = Session.query.get(session_id)
-    if not sess or sess.user_id != uid:
-        return jsonify({"error": "Session not found"}), 404
-
-    result = ask(sess.exam_id, sess.subject_id, sess.topic_id,
-                 sess.stage, history, user_msg)
-
-    attempt = Attempt(session_id=session_id, topic_id=sess.topic_id,
-                      question_text=history[-1]["content"] if history else "",
-                      user_answer=user_msg, is_correct=result["is_correct"],
-                      time_secs=time_secs)
-    db.session.add(attempt)
-
-    if result["is_correct"] is not None:
-        sess.questions_total   += 1
-        if result["is_correct"]:
-            sess.questions_correct += 1
-        stat = get_topic_stat(uid, sess.exam_id, sess.subject_id, sess.topic_id)
-        stat.update(result["is_correct"], time_secs)
-
-    if result["session_complete"]:
-        sess.completed = True
-        sess.ended_at  = datetime.utcnow()
-        if sess.questions_total:
-            sess.score_pct = round(sess.questions_correct / sess.questions_total * 100, 1)
-        entry = Leaderboard(
-            user_id=uid, player_name=dname,
-            exam_id=sess.exam_id, subject_id=sess.subject_id,
-            topic_id=sess.topic_id, mode="practice",
-            score_pct=sess.score_pct or 0,
-            correct=sess.questions_correct, total=sess.questions_total,
-            avg_time_secs=time_secs
-        )
-        db.session.add(entry)
-
-    db.session.commit()
-
-    rank = None
-    if result["session_complete"] and sess.score_pct:
-        better = Leaderboard.query.filter(
-            Leaderboard.exam_id    == sess.exam_id,
-            Leaderboard.subject_id == sess.subject_id,
-            Leaderboard.topic_id   == sess.topic_id,
-            Leaderboard.score_pct  > sess.score_pct
-        ).count()
-        rank = better + 1
-
-    return jsonify({
-        "response": result["response"], "session_complete": result["session_complete"],
-        "is_correct": result["is_correct"],
-        "score": {"correct": sess.questions_correct, "total": sess.questions_total},
-        "rank": rank
-    })
-
-@app.route("/api/mock/generate", methods=["POST"])
-@login_required
-def mock_generate():
-    d = request.json
-    questions = generate_mock_test(d["exam_id"], d["subject_id"], d.get("num_questions", 10))
-    return jsonify({"questions": questions})
-
-@app.route("/api/mock/submit", methods=["POST"])
-@login_required
-def mock_submit():
-    d          = request.json
-    uid        = current_user_id()
-    dname      = session.get("display_name", "User")
-    exam_id    = d["exam_id"]
-    subject_id = d["subject_id"]
-    correct    = d["correct"]
-    total      = d["total"]
-    total_secs = d.get("total_secs", 0)
-    score_pct  = round(correct / total * 100, 1) if total else 0
-    avg_time   = round(total_secs / total, 1) if total else 0
-
-    sess = Session(user_id=uid, player_name=dname, exam_id=exam_id,
-                   subject_id=subject_id, mode="mock", completed=True,
-                   ended_at=datetime.utcnow(), questions_total=total,
-                   questions_correct=correct, score_pct=score_pct, avg_time_secs=avg_time)
-    db.session.add(sess)
-    entry = Leaderboard(user_id=uid, player_name=dname, exam_id=exam_id,
-                        subject_id=subject_id, mode="mock", score_pct=score_pct,
-                        correct=correct, total=total, avg_time_secs=avg_time)
-    db.session.add(entry)
-    db.session.commit()
-
-    better = Leaderboard.query.filter(
-        Leaderboard.exam_id    == exam_id,
-        Leaderboard.subject_id == subject_id,
-        Leaderboard.mode       == "mock",
-        Leaderboard.score_pct  > score_pct
-    ).count()
-    return jsonify({"score_pct": score_pct, "rank": better + 1})
-
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True, port=5001)
-
-# ── Admin auth helper ─────────────────────────────────────────
-
-ADMIN_EMAIL    = os.environ.get("ADMIN_EMAIL", "admin@govtprep.com")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme")
+# ── Admin ─────────────────────────────────────────────────────
 
 def admin_required(f):
     from functools import wraps
@@ -321,14 +590,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ── Admin routes ──────────────────────────────────────────────
-
-@app.route("/admin/login", methods=["GET", "POST"])
+@app.route("/admin/login", methods=["GET","POST"])
 def admin_login():
     if request.method == "POST":
-        email    = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
-        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+        if (request.form.get("email","") == ADMIN_EMAIL and
+            request.form.get("password","") == ADMIN_PASSWORD):
             session["is_admin"] = True
             return redirect(url_for("admin_dashboard"))
         return render_template("admin/login.html", error="Invalid credentials.")
@@ -342,200 +608,34 @@ def admin_logout():
 @app.route("/admin")
 @admin_required
 def admin_dashboard():
-    from sqlalchemy import func, distinct
-
-    total_sessions = Session.query.filter_by(completed=True).count()
-    sessions_today = Session.query.filter(
-        Session.completed == True,
-        Session.started_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)
-    ).count()
-
-    all_sessions  = Session.query.filter_by(completed=True).all()
-    scores        = [s.score_pct for s in all_sessions if s.score_pct]
-    avg_score     = round(sum(scores) / len(scores), 1) if scores else 0
-    unique_users  = len(set(s.user_id for s in all_sessions))
-
-    recent_sessions = Session.query.filter_by(completed=True)\
-                                   .order_by(Session.started_at.desc()).limit(15).all()
-
-    top_performers = Leaderboard.query.order_by(Leaderboard.score_pct.desc()).limit(10).all()
-
-    # Exam stats
-    exam_map = {}
-    for s in all_sessions:
-        if s.exam_id not in exam_map:
-            exam_map[s.exam_id] = {"count": 0, "scores": [], "users": set()}
-        exam_map[s.exam_id]["count"]  += 1
-        exam_map[s.exam_id]["users"].add(s.user_id)
-        if s.score_pct:
-            exam_map[s.exam_id]["scores"].append(s.score_pct)
-
-    exam_stats = []
-    for eid, data in sorted(exam_map.items(), key=lambda x: -x[1]["count"]):
-        avg = round(sum(data["scores"]) / len(data["scores"]), 1) if data["scores"] else 0
-        exam_stats.append({"exam_id": eid, "count": data["count"],
-                           "avg": avg, "users": len(data["users"])})
+    total_q    = db.table("questions").select("id", count="exact").eq("is_verified", True).execute()
+    total_sess = db.table("sessions").select("id", count="exact").eq("completed", True).execute()
+    total_subs = db.table("subscriptions").select("id", count="exact").execute()
+    recent     = db.table("sessions").select("*").eq("completed", True)\
+                   .order("started_at", desc=True).limit(20).execute()
+    tier_counts = {}
+    subs = db.table("subscriptions").select("tier").execute()
+    for s in (subs.data or []):
+        t = s["tier"]
+        tier_counts[t] = tier_counts.get(t,0) + 1
 
     return render_template("admin/dashboard.html",
-        stats={"total_users": unique_users, "total_sessions": total_sessions,
-               "sessions_today": sessions_today, "avg_score": avg_score},
-        recent_sessions=recent_sessions,
-        top_performers=top_performers,
-        exam_stats=exam_stats
+        stats={
+            "total_questions": total_q.count or 0,
+            "total_sessions":  total_sess.count or 0,
+            "total_users":     total_subs.count or 0,
+        },
+        tier_counts=tier_counts,
+        recent_sessions=recent.data or []
     )
 
-@app.route("/admin/users")
+@app.route("/admin/questions")
 @admin_required
-def admin_users():
-    all_sessions = Session.query.filter_by(completed=True).all()
-    user_map = {}
-    for s in all_sessions:
-        uid = s.user_id
-        if uid not in user_map:
-            user_map[uid] = {"name": s.player_name, "email": "",
-                             "sessions": 0, "scores": [], "last_active": None}
-        user_map[uid]["sessions"] += 1
-        if s.score_pct:
-            user_map[uid]["scores"].append(s.score_pct)
-        if not user_map[uid]["last_active"] or s.started_at > user_map[uid]["last_active"]:
-            user_map[uid]["last_active"] = s.started_at
+def admin_questions():
+    q = db.table("questions").select("*").eq("is_verified", True)\
+          .order("created_at", desc=True).limit(100).execute()
+    return render_template("admin/questions.html",
+        questions=q.data or [], exams=CURRICULUM["exams"])
 
-    users = []
-    for uid, data in user_map.items():
-        avg = round(sum(data["scores"]) / len(data["scores"]), 1) if data["scores"] else None
-        users.append({"name": data["name"], "email": uid[:12] + "...",
-                      "sessions": data["sessions"], "avg_score": avg,
-                      "last_active": data["last_active"]})
-    users.sort(key=lambda x: -(x["sessions"]))
-
-    return render_template("admin/users.html", users=users)
-
-@app.route("/admin/sessions")
-@admin_required
-def admin_sessions():
-    exam_filter = request.args.get("exam", "")
-    q = Session.query.filter_by(completed=True)
-    if exam_filter:
-        q = q.filter_by(exam_id=exam_filter)
-    sessions = q.order_by(Session.started_at.desc()).limit(100).all()
-    return render_template("admin/sessions.html", sessions=sessions,
-                           exams=CURRICULUM["exams"], exam_filter=exam_filter)
-
-@app.route("/admin/leaderboard")
-@admin_required
-def admin_leaderboard():
-    entries = Leaderboard.query.order_by(Leaderboard.score_pct.desc()).limit(100).all()
-    return render_template("leaderboard.html", entries=entries,
-                           exams=CURRICULUM["exams"], selected_exam="",
-                           display_name="Admin")
-
-# ── Payment routes ─────────────────────────────────────────────
-
-import razorpay
-import hmac
-import hashlib
-
-RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
-
-PLANS = {
-    "monthly": {
-        "name":       "Monthly Subscription",
-        "subtotal":   320,
-        "gst":        round(320 * 0.18, 2),
-        "razorpay_fee": round(320 * 0.02, 2),
-    },
-    "mocktest": {
-        "name":       "Mock Test (single)",
-        "subtotal":   89,
-        "gst":        round(89 * 0.18, 2),
-        "razorpay_fee": round(89 * 0.02, 2),
-    }
-}
-
-def get_plan_total(plan_key):
-    p = PLANS[plan_key]
-    return round(p["subtotal"] + p["gst"] + p["razorpay_fee"], 2)
-
-@app.route("/pricing")
-def pricing():
-    dn = session.get("display_name", "")
-    return render_template("pricing.html", display_name=dn)
-
-@app.route("/checkout")
-@login_required
-def checkout():
-    plan = request.args.get("plan", "monthly")
-    if plan not in PLANS:
-        return redirect(url_for("pricing"))
-
-    p      = PLANS[plan]
-    total  = get_plan_total(plan)
-    # Amount in paise for Razorpay
-    amount_paise = int(total * 100)
-
-    rzp_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-    order = rzp_client.order.create({
-        "amount":   amount_paise,
-        "currency": "INR",
-        "payment_capture": 1
-    })
-
-    u = current_user()
-    return render_template("checkout.html",
-        plan=plan,
-        plan_name=p["name"],
-        subtotal=p["subtotal"],
-        gst=p["gst"],
-        razorpay_fee=p["razorpay_fee"],
-        total=total,
-        amount_display=f"{total} INR",
-        amount_paise=amount_paise,
-        order_id=order["id"],
-        user_email=u.email if u else "",
-        display_name=session.get("display_name", ""),
-        razorpay_key=RAZORPAY_KEY_ID
-    )
-
-@app.route("/api/payment/verify", methods=["POST"])
-@login_required
-def verify_payment():
-    d          = request.json
-    order_id   = d.get("razorpay_order_id", "")
-    payment_id = d.get("razorpay_payment_id", "")
-    signature  = d.get("razorpay_signature", "")
-    plan       = d.get("plan", "monthly")
-
-    # Verify signature
-    msg      = f"{order_id}|{payment_id}".encode()
-    expected = hmac.new(RAZORPAY_KEY_SECRET.encode(), msg, hashlib.sha256).hexdigest()
-
-    if expected != signature:
-        return jsonify({"success": False, "error": "Invalid signature"}), 400
-
-    # TODO: store subscription in Supabase / mark user as paid
-    # For now just return success
-    return jsonify({"success": True, "plan": plan})
-
-@app.route("/payment/success")
-@login_required
-def payment_success():
-    plan = request.args.get("plan", "monthly")
-    return render_template("payment_success.html", plan=plan,
-                           display_name=session.get("display_name", ""))
-
-@app.route("/payment/failed")
-@login_required
-def payment_failed():
-    return render_template("payment_failed.html",
-                           display_name=session.get("display_name", ""))
-
-@app.route("/privacy")
-def privacy():
-    from datetime import date
-    return render_template("privacy.html", date=date.today().strftime("%d %B %Y"))
-
-@app.route("/terms")
-def terms():
-    from datetime import date
-    return render_template("terms.html", date=date.today().strftime("%d %B %Y"))
+if __name__ == "__main__":
+    app.run(debug=True, port=5001)

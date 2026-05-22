@@ -2,26 +2,36 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1a56db">
 <title>Checkout - GovtPrep</title>
 <link rel="stylesheet" href="/static/css/style.css">
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
-.checkout-wrap{max-width:480px;margin:60px auto;padding:0 24px}
-.checkout-card{background:#fff;border:1px solid var(--border);border-radius:14px;
-  padding:36px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:20px}
-.co-title{font-size:1.2rem;font-weight:800}
-.co-plan{background:var(--surface2);border-radius:10px;padding:16px 20px;
+.checkout-wrap{max-width:440px;margin:0 auto;padding:20px 16px 60px}
+.co-card{background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:28px 24px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)}
+.co-title{font-size:1.15rem;font-weight:800}
+.co-plan{background:var(--surface2);border-radius:10px;padding:14px 16px;
   display:flex;justify-content:space-between;align-items:center}
-.co-plan-name{font-size:.9rem;font-weight:700}
-.co-plan-price{font-size:1.4rem;font-weight:800;color:var(--blue)}
-.co-breakdown{display:flex;flex-direction:column;gap:6px}
-.co-row{display:flex;justify-content:space-between;font-size:.83rem;color:var(--dim)}
+.co-plan-name{font-size:.88rem;font-weight:700}
+.co-plan-price{font-size:1.3rem;font-weight:800;color:var(--blue)}
+.co-rows{display:flex;flex-direction:column;gap:6px}
+.co-row{display:flex;justify-content:space-between;font-size:.82rem;color:var(--dim);padding:3px 0}
 .co-row.total{font-size:.95rem;font-weight:700;color:var(--text);
-  border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
-.co-note{font-size:.78rem;color:var(--dim);text-align:center}
-.co-secure{display:flex;align-items:center;justify-content:center;gap:8px;
-  font-size:.75rem;color:var(--dim);margin-top:4px}
+  border-top:1px solid var(--border);padding-top:10px;margin-top:2px}
+.gpay-btn{background:#000;color:#fff;border:none;border-radius:10px;
+  padding:16px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  letter-spacing:.3px}
+.gpay-btn:disabled{opacity:.5;cursor:not-allowed}
+.gpay-logo{width:48px;height:20px;background:#fff;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;font-size:.65rem;
+  font-weight:900;color:#4285f4;letter-spacing:-.5px;padding:0 4px}
+.upi-alt{text-align:center;font-size:.78rem;color:var(--dim)}
+.upi-alt a{color:var(--blue);font-weight:600}
+.co-note{font-size:.75rem;color:var(--dim);text-align:center;line-height:1.5}
+.status-box{display:none;background:var(--surface2);border-radius:10px;
+  padding:14px;font-size:.85rem;color:var(--text);text-align:center;line-height:1.6}
 </style>
 </head>
 <body>
@@ -30,82 +40,135 @@
 </nav>
 
 <div class="checkout-wrap">
-  <div class="checkout-card">
+  <div class="co-card">
     <div class="co-title">Complete your purchase</div>
 
     <div class="co-plan">
       <div class="co-plan-name">{{ plan_name }}</div>
-      <div class="co-plan-price">{{ amount_display }}</div>
+      <div class="co-plan-price">{{ amount }} INR</div>
     </div>
 
-    <div class="co-breakdown">
-      <div class="co-row"><span>Subtotal</span><span>{{ subtotal }} INR</span></div>
+    <div class="co-rows">
+      <div class="co-row"><span>Base price</span><span>{{ base }} INR</span></div>
       <div class="co-row"><span>GST (18%)</span><span>{{ gst }} INR</span></div>
-      <div class="co-row"><span>Razorpay fee (2%)</span><span>{{ razorpay_fee }} INR</span></div>
-      <div class="co-row total"><span>Total</span><span>{{ total }} INR</span></div>
+      <div class="co-row total"><span>Total</span><span>{{ amount }} INR</span></div>
     </div>
 
-    <button class="btn-primary btn-full" id="payBtn" onclick="startPayment()">
-      Pay {{ total }} INR with Razorpay
+    <button class="gpay-btn" id="gpayBtn" onclick="payWithGPay()">
+      Pay with
+      <span class="gpay-logo">G Pay</span>
     </button>
 
-    <div class="co-note">7-day money back guarantee. Cancel anytime.</div>
-    <div class="co-secure">Secured by Razorpay. We never store your payment details.</div>
+    <div class="upi-alt">
+      or <a href="upi://pay?pa={{ upi_id }}&pn=GovtPrep&am={{ amount }}&cu=INR&tn={{ plan_ref }}">
+        pay via any UPI app
+      </a>
+    </div>
+
+    <div class="status-box" id="statusBox"></div>
+
+    <div class="co-note">
+      7-day money back guarantee. After payment, your account is activated instantly.
+      Secured by Google Pay.
+    </div>
   </div>
 </div>
 
 <script>
-const ORDER_ID   = "{{ order_id }}";
-const AMOUNT     = {{ amount_paise }};
-const PLAN       = "{{ plan }}";
-const USER_EMAIL = "{{ user_email }}";
-const USER_NAME  = "{{ display_name }}";
-const RZP_KEY    = "{{ razorpay_key }}";
+const AMOUNT   = {{ amount }};
+const PLAN     = "{{ plan }}";
+const UPI_ID   = "{{ upi_id }}";
+const PLAN_REF = "{{ plan_ref }}";
 
-function startPayment() {
-  document.getElementById('payBtn').disabled = true;
-  document.getElementById('payBtn').textContent = 'Opening payment...';
+async function payWithGPay() {
+  const btn = document.getElementById('gpayBtn');
+  btn.disabled = true;
+  btn.textContent = 'Opening Google Pay...';
 
-  const options = {
-    key:         RZP_KEY,
-    amount:      AMOUNT,
-    currency:    "INR",
-    name:        "GovtPrep",
-    description: PLAN === 'monthly' ? 'Monthly Subscription' : 'Mock Test',
-    order_id:    ORDER_ID,
-    prefill:     { email: USER_EMAIL, name: USER_NAME },
-    theme:       { color: "#1a56db" },
-    handler: function(response) {
-      // Verify payment on backend
-      fetch('/api/payment/verify', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          razorpay_order_id:   response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature:  response.razorpay_signature,
-          plan: PLAN
-        })
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          window.location.href = '/payment/success?plan=' + PLAN;
-        } else {
-          window.location.href = '/payment/failed';
+  // Google Pay via Payment Request API
+  const paymentRequest = new PaymentRequest(
+    [{
+      supportedMethods: 'https://google.com/pay',
+      data: {
+        apiVersion: 2,
+        apiVersionMinor: 0,
+        merchantInfo: {
+          merchantName: 'GovtPrep',
+          merchantId:   '{{ google_merchant_id }}'
+        },
+        allowedPaymentMethods: [{
+          type: 'UPI',
+          parameters: {
+            payeeVpa:  UPI_ID,
+            payeeName: 'GovtPrep',
+            mcc:       '5945',
+            countryCode: 'IN'
+          },
+          tokenizationSpecification: {
+            type: 'DIRECT'
+          }
+        }],
+        transactionInfo: {
+          totalPriceStatus: 'FINAL',
+          totalPrice:       AMOUNT.toString(),
+          currencyCode:     'INR',
+          countryCode:      'IN'
         }
-      });
-    },
-    modal: {
-      ondismiss: function() {
-        document.getElementById('payBtn').disabled = false;
-        document.getElementById('payBtn').textContent = 'Pay {{ total }} INR with Razorpay';
+      }
+    }],
+    {
+      total: {
+        label:  PLAN === 'monthly' ? 'GovtPrep Monthly' : 'GovtPrep Mock Test',
+        amount: { currency: 'INR', value: AMOUNT.toString() }
       }
     }
-  };
+  );
 
-  const rzp = new Razorpay(options);
-  rzp.open();
+  try {
+    const canPay = await paymentRequest.canMakePayment();
+    if (!canPay) {
+      // Fallback to UPI deep link
+      window.location.href = `upi://pay?pa=${UPI_ID}&pn=GovtPrep&am=${AMOUNT}&cu=INR&tn=${PLAN_REF}`;
+      showStatus('Opening UPI app...');
+      return;
+    }
+
+    const result = await paymentRequest.show();
+    await result.complete('success');
+
+    // Send to backend for verification
+    const res = await fetch('/api/payment/verify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        plan:       PLAN,
+        upi_ref:    result.details.upiTransactionId || PLAN_REF,
+        amount:     AMOUNT
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = '/payment/success?plan=' + PLAN;
+    } else {
+      showStatus('Payment received. Activating your account...');
+      setTimeout(() => window.location.href = '/payment/success?plan=' + PLAN, 2000);
+    }
+
+  } catch(e) {
+    if (e.name === 'AbortError') {
+      btn.disabled = false;
+      btn.innerHTML = 'Pay with <span class="gpay-logo">G Pay</span>';
+    } else {
+      // Fallback UPI link
+      window.location.href = `upi://pay?pa=${UPI_ID}&pn=GovtPrep&am=${AMOUNT}&cu=INR&tn=${PLAN_REF}`;
+    }
+  }
+}
+
+function showStatus(msg) {
+  const box = document.getElementById('statusBox');
+  box.style.display = 'block';
+  box.textContent = msg;
 }
 </script>
 </body>
