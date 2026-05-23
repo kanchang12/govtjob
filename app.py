@@ -270,28 +270,40 @@ def api_get_questions():
     subject_id = data["subject_id"]
     topic_id   = data["topic_id"]
     exclude    = data.get("exclude_ids", [])
+    count      = data.get("count", 10)
     lang       = get_user_language(uid)
 
     usage = check_usage_allowed(uid)
     if not usage["allowed"]:
         return jsonify({"error": "daily_limit", "upgrade_url": "/upgrade?reason=limit"}), 403
 
+    # Check how many questions exist
+    existing = db.table("questions").select("id", count="exact")                 .eq("exam_id", exam_id).eq("subject_id", subject_id)                 .eq("topic_id", topic_id).eq("is_verified", True)                 .eq("is_mock_test", False).execute()
+    have = existing.count or 0
+
+    if have == 0:
+        # Generate first batch synchronously (just 5 to be fast)
+        from question_bank import _ensure_topic_has_questions
+        _ensure_topic_has_questions(exam_id, subject_id, topic_id, min_count=5)
+
     questions = get_questions_for_session(exam_id, subject_id, topic_id,
-                                       count=10, exclude_ids=exclude, language=lang)
+                                          count=count, exclude_ids=exclude, language=lang)
+
     if not questions:
-        return jsonify({"error": "no_questions", "message": "No questions available for this topic yet."}), 404
+        return jsonify({"generating": True,
+                        "message": "Generating your first questions... please wait a moment."}), 202
 
     # Strip correct answer from response
     safe = []
     for q in questions:
         safe.append({
-            "id":         q["id"],
-            "question":   q.get("question",""),
-            "option_a":   q.get("option_a",""),
-            "option_b":   q.get("option_b",""),
-            "option_c":   q.get("option_c",""),
-            "option_d":   q.get("option_d",""),
-            "difficulty": q.get("difficulty", 3)
+            "id":       q["id"],
+            "question": q.get("question",""),
+            "option_a": q.get("option_a",""),
+            "option_b": q.get("option_b",""),
+            "option_c": q.get("option_c",""),
+            "option_d": q.get("option_d",""),
+            "difficulty":q.get("difficulty", 3)
         })
     return jsonify({"questions": safe})
 
@@ -504,143 +516,4 @@ def apply_referral_code():
         return jsonify({"success": False, "error": "No code provided"}), 400
     ok = apply_referral(code, uid)
     if ok:
-        return jsonify({"success": True, "message": "7 days added to both accounts!"})
-    return jsonify({"success": False, "error": "Invalid or already used code"}), 400
-
-@app.route("/api/usage")
-@login_required
-def api_usage():
-    uid = current_user_id()
-    return jsonify(check_usage_allowed(uid))
-
-# ── Payment (GPay) ────────────────────────────────────────────
-
-@app.route("/pricing")
-def pricing():
-    dn = session.get("display_name","")
-    return render_template("pricing.html", display_name=dn, tier_prices=TIER_PRICES)
-
-@app.route("/checkout")
-@login_required
-def checkout():
-    plan = request.args.get("plan","tier1")
-    if plan not in TIER_PRICES:
-        return redirect(url_for("pricing"))
-    p       = TIER_PRICES[plan]
-    base    = p["amount"]
-    gst     = round(base * 0.18, 2)
-    total   = round(base + gst, 2)
-    plan_ref = plan[:2].upper() + ''.join(random.choices(string.digits, k=8))
-    u = current_user()
-    return render_template("checkout.html",
-        plan=plan, plan_name=p["label"],
-        base=base, gst=gst, amount=total, plan_ref=plan_ref,
-        upi_id=UPI_ID, google_merchant_id=GOOGLE_MERCHANT_ID,
-        display_name=session.get("display_name","")
-    )
-
-@app.route("/api/payment/verify", methods=["POST"])
-@login_required
-def verify_payment():
-    uid     = current_user_id()
-    data    = request.json
-    plan    = data.get("plan","tier1")
-    upi_ref = data.get("upi_ref","")
-    print(f"Payment: user={uid} plan={plan} upi_ref={upi_ref}")
-    activate_tier(uid, plan, upi_ref)
-    return jsonify({"success": True, "plan": plan})
-
-@app.route("/payment/success")
-@login_required
-def payment_success():
-    plan = request.args.get("plan","tier1")
-    name = TIER_PRICES.get(plan, {}).get("label","Pro")
-    return render_template("payment_success.html", plan=plan, plan_name=name,
-                           display_name=session.get("display_name",""))
-
-@app.route("/payment/failed")
-@login_required
-def payment_failed():
-    return render_template("payment_failed.html",
-                           display_name=session.get("display_name",""))
-
-# ── PWA and static ────────────────────────────────────────────
-
-@app.route("/manifest.json")
-def manifest():
-    return send_from_directory("static", "manifest.json")
-
-@app.route("/sw.js")
-def service_worker():
-    return send_from_directory("static", "sw.js")
-
-@app.route("/privacy")
-def privacy():
-    from datetime import date
-    return render_template("privacy.html", date=date.today().strftime("%d %B %Y"))
-
-@app.route("/terms")
-def terms():
-    from datetime import date
-    return render_template("terms.html", date=date.today().strftime("%d %B %Y"))
-
-# ── Admin ─────────────────────────────────────────────────────
-
-def admin_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get("is_admin"):
-            return redirect(url_for("admin_login"))
-        return f(*args, **kwargs)
-    return decorated
-
-@app.route("/admin/login", methods=["GET","POST"])
-def admin_login():
-    if request.method == "POST":
-        if (request.form.get("email","") == ADMIN_EMAIL and
-            request.form.get("password","") == ADMIN_PASSWORD):
-            session["is_admin"] = True
-            return redirect(url_for("admin_dashboard"))
-        return render_template("admin/login.html", error="Invalid credentials.")
-    return render_template("admin/login.html", error=None)
-
-@app.route("/admin/logout")
-def admin_logout():
-    session.pop("is_admin", None)
-    return redirect(url_for("admin_login"))
-
-@app.route("/admin")
-@admin_required
-def admin_dashboard():
-    total_q    = db.table("questions").select("id", count="exact").eq("is_verified", True).execute()
-    total_sess = db.table("sessions").select("id", count="exact").eq("completed", True).execute()
-    total_subs = db.table("subscriptions").select("id", count="exact").execute()
-    recent     = db.table("sessions").select("*").eq("completed", True)\
-                   .order("started_at", desc=True).limit(20).execute()
-    tier_counts = {}
-    subs = db.table("subscriptions").select("tier").execute()
-    for s in (subs.data or []):
-        t = s["tier"]
-        tier_counts[t] = tier_counts.get(t,0) + 1
-
-    return render_template("admin/dashboard.html",
-        stats={
-            "total_questions": total_q.count or 0,
-            "total_sessions":  total_sess.count or 0,
-            "total_users":     total_subs.count or 0,
-        },
-        tier_counts=tier_counts,
-        recent_sessions=recent.data or []
-    )
-
-@app.route("/admin/questions")
-@admin_required
-def admin_questions():
-    q = db.table("questions").select("*").eq("is_verified", True)\
-          .order("created_at", desc=True).limit(100).execute()
-    return render_template("admin/questions.html",
-        questions=q.data or [], exams=CURRICULUM["exams"])
-
-if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+        return jsonify({"success": True, "message":
