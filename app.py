@@ -342,7 +342,7 @@ def api_answer():
         if can_use_mentor(uid):
             # Get full question for mentor
             full_q = get_answer(question_id) or {}
-            feedback = get_mentor_feedback(full_q, user_answer, uid)
+            feedback = get_mentor_feedback(full_q, user_answer)
             attempt_row["mentor_feedback"] = feedback
         else:
             feedback = get_basic_feedback(q_data.get("topic_id",""))
