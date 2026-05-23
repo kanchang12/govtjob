@@ -12,16 +12,12 @@
 body{background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   min-height:100vh;-webkit-tap-highlight-color:transparent}
-
-/* Navbar */
 .navbar{display:flex;align-items:center;justify-content:space-between;
   padding:0 16px;height:52px;background:var(--white);
   border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
 .nav-left{font-size:.85rem;color:var(--blue);font-weight:700;text-decoration:none}
 .nav-score{font-size:.95rem;font-weight:800;color:var(--text)}
 .nav-pct{color:var(--blue);margin-left:6px;font-weight:800}
-
-/* Timer bar */
 .timer-bar{background:var(--white);border-bottom:1px solid var(--border);
   padding:10px 16px;display:flex;align-items:center;gap:12px}
 .timer-label{font-size:.8rem;font-weight:600;color:var(--dim);flex:1;
@@ -29,83 +25,53 @@ body{background:var(--bg);color:var(--text);
 .timer-num{font-size:1.2rem;font-weight:800;min-width:30px;text-align:right}
 .timer-track{flex:1;max-width:80px;height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden}
 .timer-fill{height:100%;border-radius:3px;transition:width .9s linear}
-
-/* Main */
 .main{padding:14px 16px 100px;display:flex;flex-direction:column;gap:12px;max-width:600px;margin:0 auto}
-
-/* Question card */
 .q-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .q-num{font-size:.72rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
 .q-text{font-size:.95rem;font-weight:600;line-height:1.6;color:var(--text)}
-
-/* Options */
 .options{display:flex;flex-direction:column;gap:8px}
 .opt{display:flex;align-items:flex-start;gap:12px;background:var(--bg);
-  border:2px solid var(--border);border-radius:12px;padding:14px 14px;
-  cursor:pointer;text-align:left;width:100%;transition:border-color .15s,background .15s;
-  -webkit-appearance:none}
-.opt:active:not(:disabled){transform:scale(.98)}
+  border:2px solid var(--border);border-radius:12px;padding:14px;
+  cursor:pointer;text-align:left;width:100%;
+  -webkit-appearance:none;font-family:inherit}
+.opt:active{opacity:.8}
 .opt.selected{border-color:var(--blue);background:#eff6ff}
 .opt.correct{border-color:var(--green);background:#f0fdf4}
 .opt.wrong{border-color:var(--red);background:#fef2f2}
-.opt:disabled{cursor:default}
 .opt-letter{font-size:.88rem;font-weight:800;color:var(--blue);min-width:18px;flex-shrink:0;margin-top:1px}
 .opt.correct .opt-letter{color:var(--green)}
 .opt.wrong .opt-letter{color:var(--red)}
 .opt-text{font-size:.88rem;line-height:1.45;color:var(--text)}
-
-/* Explanation */
-.explanation{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;
-  padding:14px 16px;display:none;flex-direction:column;gap:8px}
+.explanation{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;display:none;flex-direction:column;gap:8px}
 .explanation.show{display:flex}
 .exp-title{font-size:.72rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px}
 .exp-text{font-size:.85rem;line-height:1.65;color:#0f172a}
-.mentor-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
-  padding:12px 14px;margin-top:4px;display:none}
-.mentor-box.show{display:block}
-.mentor-title{font-size:.7rem;font-weight:700;color:var(--amber);text-transform:uppercase;margin-bottom:6px}
-.mentor-text{font-size:.83rem;line-height:1.6;color:#0f172a}
-
-/* Next button */
 .next-btn{background:var(--blue);color:#fff;border:none;border-radius:12px;
   padding:16px;font-size:.95rem;font-weight:700;cursor:pointer;width:100%;
-  display:none;-webkit-appearance:none}
+  display:none;-webkit-appearance:none;font-family:inherit}
 .next-btn.show{display:block}
 .next-btn:active{background:#1648c0}
-
-/* Loading */
 .loading-card{background:var(--white);border:1px solid var(--border);border-radius:14px;
   padding:32px 16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);
   border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:.88rem;color:var(--dim)}
-
-/* Sidebar stats - horizontal scroll on mobile */
-.stats-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px}
-.stat-card{background:var(--white);border:1px solid var(--border);border-radius:10px;
-  padding:12px 14px;min-width:130px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.stat-title{font-size:.65rem;font-weight:700;text-transform:uppercase;
-  letter-spacing:.5px;color:var(--dim);margin-bottom:6px}
-.stat-row{display:flex;justify-content:space-between;font-size:.78rem;padding:2px 0}
-.stat-val{font-weight:700}
-.sc-g{color:var(--green)}.sc-m{color:var(--amber)}.sc-l{color:var(--red)}
-
-/* Complete overlay */
+.error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;
+  padding:14px;font-size:.85rem;color:var(--red);text-align:center}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);
   display:none;align-items:flex-end;justify-content:center;z-index:200}
 .overlay.show{display:flex}
 .ov-card{background:var(--white);border-radius:20px 20px 0 0;
   padding:28px 20px 40px;width:100%;max-width:500px;
-  display:flex;flex-direction:column;gap:14px}
+  display:flex;flex-direction:column;gap:12px}
 .ov-title{font-size:1.1rem;font-weight:800}
 .ov-score{font-size:2rem;font-weight:800}
 .ov-rank{font-size:.9rem;font-weight:700;color:var(--blue)}
-.ov-pct{font-size:.9rem;font-weight:700;color:var(--green)}
 .ov-btn{display:block;text-align:center;padding:14px;border-radius:12px;
-  font-size:.92rem;font-weight:700;border:none;cursor:pointer;width:100%}
-.ov-btn-p{background:var(--blue);color:#fff;margin-bottom:8px}
-.ov-btn-s{background:var(--bg);color:var(--text);border:1px solid var(--border);text-decoration:none}
+  font-size:.92rem;font-weight:700;border:none;cursor:pointer;width:100%;text-decoration:none;font-family:inherit}
+.ov-btn-p{background:var(--blue);color:#fff}
+.ov-btn-s{background:var(--bg);color:var(--text);border:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -121,77 +87,42 @@ body{background:var(--bg);color:var(--text);
 <div class="timer-bar">
   <div class="timer-label">{{ topic.label }}</div>
   <div class="timer-num" id="timerNum">60</div>
-  <div class="timer-track"><div class="timer-fill" id="timerFill" style="width:100%;background:var(--blue)"></div></div>
+  <div class="timer-track">
+    <div class="timer-fill" id="timerFill" style="width:100%;background:var(--blue)"></div>
+  </div>
 </div>
 
 <div class="main">
 
-  <!-- Stats row -->
-  <div class="stats-row">
-    {% if stat and stat.attempts_total %}
-    <div class="stat-card">
-      <div class="stat-title">Your record</div>
-      <div class="stat-row"><span>Accuracy</span>
-        <span class="stat-val {% if stat.accuracy_pct >= 70 %}sc-g{% elif stat.accuracy_pct >= 50 %}sc-m{% else %}sc-l{% endif %}">
-          {{ stat.accuracy_pct }}%
-        </span>
-      </div>
-      <div class="stat-row"><span>Attempts</span><span class="stat-val">{{ stat.attempts_total }}</span></div>
-    </div>
-    {% endif %}
-    {% if leaders %}
-    <div class="stat-card">
-      <div class="stat-title">Top scores</div>
-      {% for l in leaders %}
-      <div class="stat-row">
-        <span>#{{ loop.index }} {{ l.display_name[:8] }}</span>
-        <span class="stat-val sc-g">{{ l.score_pct }}%</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
+  <div id="statusArea"></div>
 
-  <!-- Loading state -->
   <div class="loading-card" id="loadingCard">
     <div class="spinner"></div>
-    <div class="loading-text">Loading your question...</div>
+    <div class="loading-text" id="loadingText">Loading your question...</div>
   </div>
 
-  <!-- Question (hidden until loaded) -->
   <div id="questionWrap" style="display:none;flex-direction:column;gap:12px">
     <div class="q-card">
-      <div class="q-num" id="qNum">Question 1 of 10</div>
+      <div class="q-num" id="qNum">Question 1</div>
       <div class="q-text" id="qText"></div>
     </div>
-
     <div class="options" id="optionsWrap"></div>
-
     <div class="explanation" id="explanation">
       <div class="exp-title">Explanation</div>
       <div class="exp-text" id="expText"></div>
     </div>
-
-    <div class="mentor-box" id="mentorBox">
-      <div class="mentor-title">Mentor Feedback</div>
-      <div class="mentor-text" id="mentorText"></div>
-    </div>
-
     <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
   </div>
 
 </div>
 
-<!-- Complete overlay -->
 <div class="overlay" id="overlay">
   <div class="ov-card">
     <div class="ov-title">Session complete</div>
     <div class="ov-score" id="ovScore"></div>
     <div class="ov-rank" id="ovRank"></div>
-    <div class="ov-pct" id="ovPct"></div>
     <button class="ov-btn ov-btn-p" onclick="location.reload()">Practice again</button>
     <a href="/exam/{{ exam.id }}" class="ov-btn ov-btn-s">Back to topics</a>
-    <a href="/leaderboard?exam_id={{ exam.id }}" class="ov-btn ov-btn-s">Leaderboard</a>
   </div>
 </div>
 
@@ -199,171 +130,189 @@ body{background:var(--bg);color:var(--text);
 const EXAM_ID    = "{{ exam.id }}";
 const SUBJECT_ID = "{{ subject.id }}";
 const TOPIC_ID   = "{{ topic.id }}";
-const STAGE      = "{{ stage }}";
-const TIER       = "{{ tier }}";
-
 const TOTAL_QS   = 10;
 
 let sessionId    = null;
 let questions    = [];
 let currentIdx   = 0;
-let correct      = 0;
-let total        = 0;
+let correctCount = 0;
+let totalCount   = 0;
+let answered     = false;
 let timerInterval= null;
 let timeLeft     = 60;
 let questionStart= null;
-let answered     = false;
 let excludeIds   = [];
 
-// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('load', init);
 
-window.addEventListener('load', async () => {
-  // Start session
-  const sr = await fetch('/api/session/start', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({exam_id:EXAM_ID, subject_id:SUBJECT_ID,
-                          topic_id:TOPIC_ID, stage:STAGE, mode:'practice'})
-  });
-  const sd = await sr.json();
-  if (sd.error) { showError(sd.error); return; }
-  sessionId = sd.session_id;
-
-  // Load questions
-  await loadQuestions();
-});
+async function init() {
+  // Start session first
+  try {
+    const sr = await fetch('/api/session/start', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        exam_id: EXAM_ID,
+        subject_id: SUBJECT_ID,
+        topic_id: TOPIC_ID,
+        mode: 'practice'
+      })
+    });
+    const sd = await sr.json();
+    if (sd.error) {
+      showError(sd.error === 'daily_limit'
+        ? 'Daily limit reached. <a href="/pricing">Upgrade for more time</a>.'
+        : sd.error);
+      return;
+    }
+    sessionId = sd.session_id;
+  } catch(e) {
+    showError('Could not connect. Please refresh.');
+    return;
+  }
+  loadQuestions();
+}
 
 async function loadQuestions() {
   document.getElementById('loadingCard').style.display = 'block';
   document.getElementById('questionWrap').style.display = 'none';
 
-  const res  = await fetch('/api/questions/get', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      exam_id: EXAM_ID, subject_id: SUBJECT_ID,
-      topic_id: TOPIC_ID, exclude_ids: excludeIds,
-      count: TOTAL_QS
-    })
-  });
-  const data = await res.json();
+  try {
+    const res  = await fetch('/api/questions/get', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        exam_id: EXAM_ID,
+        subject_id: SUBJECT_ID,
+        topic_id: TOPIC_ID,
+        exclude_ids: excludeIds,
+        count: TOTAL_QS
+      })
+    });
+    const data = await res.json();
 
-  if (data.error === 'daily_limit') {
-    showError('Daily limit reached. Upgrade for more practice time.');
-    return;
+    if (data.error === 'daily_limit') {
+      showError('Daily limit reached. <a href="/pricing">Upgrade</a>.');
+      return;
+    }
+    if (data.generating) {
+      document.getElementById('loadingText').textContent = 'Generating first questions for this topic... (~20 seconds)';
+      setTimeout(loadQuestions, 4000);
+      return;
+    }
+    if (!data.questions || data.questions.length === 0) {
+      document.getElementById('loadingText').textContent = 'Preparing questions... please wait.';
+      setTimeout(loadQuestions, 4000);
+      return;
+    }
+
+    questions  = data.questions;
+    currentIdx = 0;
+    excludeIds = [...excludeIds, ...questions.map(q => q.id)];
+
+    document.getElementById('loadingCard').style.display = 'none';
+    document.getElementById('questionWrap').style.display = 'flex';
+    showQuestion(0);
+
+  } catch(e) {
+    showError('Failed to load questions. <button onclick="loadQuestions()" style="color:var(--blue);background:none;border:none;cursor:pointer;font-size:inherit">Retry</button>');
   }
-
-  if (data.generating) {
-    // Questions are being generated - poll again in 3s
-    document.querySelector('.loading-text').textContent = data.message || 'Generating questions...';
-    setTimeout(loadQuestions, 3000);
-    return;
-  }
-
-  if (!data.questions || data.questions.length === 0) {
-    showError('No questions available yet for this topic. Please try again in a moment.');
-    return;
-  }
-
-  questions   = data.questions;
-  currentIdx  = 0;
-  excludeIds  = [...excludeIds, ...questions.map(q => q.id)];
-
-  document.getElementById('loadingCard').style.display = 'none';
-  document.getElementById('questionWrap').style.display = 'flex';
-
-  showQuestion(0);
 }
-
-// ── Question display ──────────────────────────────────────────
 
 function showQuestion(idx) {
   answered = false;
   const q  = questions[idx];
 
-  document.getElementById('qNum').textContent  = `Question ${total + 1} of ${TOTAL_QS}`;
-  document.getElementById('qText').textContent = q.question;
-
-  const opts = document.getElementById('optionsWrap');
-  opts.innerHTML = '';
-  ['A','B','C','D'].forEach(letter => {
-    const key  = 'option_' + letter.toLowerCase();
-    const text = q[key] || '';
-    const btn  = document.createElement('button');
-    btn.className   = 'opt';
-    btn.id          = 'opt' + letter;
-    btn.onclick     = () => submitAnswer(letter);
-    btn.innerHTML   = `<span class="opt-letter">${letter}</span><span class="opt-text">${esc(text)}</span>`;
-    opts.appendChild(btn);
-  });
-
+  document.getElementById('qNum').textContent  = 'Question ' + (totalCount + 1);
+  document.getElementById('qText').textContent = q.question || '';
   document.getElementById('explanation').className = 'explanation';
-  document.getElementById('mentorBox').className   = 'mentor-box';
   document.getElementById('nextBtn').className     = 'next-btn';
+
+  const wrap = document.getElementById('optionsWrap');
+  wrap.innerHTML = '';
+
+  ['A','B','C','D'].forEach(function(letter) {
+    const text = q['option_' + letter.toLowerCase()] || '';
+    const btn  = document.createElement('button');
+    btn.className  = 'opt';
+    btn.id         = 'opt' + letter;
+    btn.innerHTML  = '<span class="opt-letter">' + letter + '</span>'
+                   + '<span class="opt-text">' + esc(text) + '</span>';
+    btn.addEventListener('click', function() { submitAnswer(letter); });
+    wrap.appendChild(btn);
+  });
 
   startTimer();
 }
-
-// ── Answer ────────────────────────────────────────────────────
 
 async function submitAnswer(letter) {
   if (answered) return;
   answered = true;
   clearInterval(timerInterval);
 
-  const timeSecs = Math.round((Date.now() - questionStart) / 1000);
+  const timeSecs = questionStart ? Math.round((Date.now() - questionStart) / 1000) : 60;
   const q        = questions[currentIdx];
 
-  // Disable all options
-  ['A','B','C','D'].forEach(l => {
-    document.getElementById('opt'+l).disabled = true;
-  });
+  // Mark selected immediately
+  const selBtn = document.getElementById('opt' + letter);
+  if (selBtn) selBtn.classList.add('selected');
 
-  // Submit to backend
-  const res  = await fetch('/api/answer', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      question_id: q.id,
-      user_answer: letter,
-      session_id:  sessionId,
-      time_secs:   timeSecs,
-      exam_id:     EXAM_ID,
-      subject_id:  SUBJECT_ID
-    })
-  });
-  const data = await res.json();
+  try {
+    const res  = await fetch('/api/answer', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        question_id: q.id,
+        user_answer: letter === 'TIMEOUT' ? 'X' : letter,
+        session_id:  sessionId,
+        time_secs:   timeSecs,
+        exam_id:     EXAM_ID,
+        subject_id:  SUBJECT_ID
+      })
+    });
+    const data = await res.json();
 
-  // Show correct/wrong
-  const correctLetter = data.correct_answer;
-  document.getElementById('opt' + correctLetter).classList.add('correct');
-  if (letter !== correctLetter) {
-    document.getElementById('opt' + letter).classList.add('wrong');
-  }
+    // Show correct/wrong colours
+    const correct = data.correct_answer;
+    const cBtn = document.getElementById('opt' + correct);
+    if (cBtn) cBtn.classList.add('correct');
+    if (letter !== correct && letter !== 'TIMEOUT') {
+      const wBtn = document.getElementById('opt' + letter);
+      if (wBtn) { wBtn.classList.remove('selected'); wBtn.classList.add('wrong'); }
+    }
 
-  // Update score
-  total++;
-  if (data.is_correct) correct++;
-  document.getElementById('correct').textContent = correct;
-  document.getElementById('total').textContent   = total;
-  const pct = Math.round(correct/total*100);
-  document.getElementById('pct').textContent = pct + '%';
+    // Update score
+    totalCount++;
+    if (data.is_correct) correctCount++;
+    document.getElementById('correct').textContent = correctCount;
+    document.getElementById('total').textContent   = totalCount;
+    if (totalCount > 0) {
+      document.getElementById('pct').textContent = Math.round(correctCount/totalCount*100) + '%';
+    }
 
-  // Show explanation
-  document.getElementById('expText').textContent = data.explanation || '';
-  document.getElementById('explanation').className = 'explanation show';
+    // Show explanation
+    if (data.explanation) {
+      document.getElementById('expText').textContent = data.explanation;
+      document.getElementById('explanation').className = 'explanation show';
+    }
 
-  // Mentor feedback for tier3
-  if (data.feedback && !data.is_correct) {
-    document.getElementById('mentorText').textContent = data.feedback;
-    document.getElementById('mentorBox').className    = 'mentor-box show';
-  }
+    // Complete or next
+    if (totalCount >= TOTAL_QS) {
+      setTimeout(completeSession, 1500);
+    } else {
+      document.getElementById('nextBtn').className = 'next-btn show';
+    }
 
-  // Show next button or complete
-  if (total >= TOTAL_QS) {
-    setTimeout(completeSession, 1200);
-  } else {
-    document.getElementById('nextBtn').className = 'next-btn show';
+  } catch(e) {
+    // Re-enable on error
+    answered = false;
+    ['A','B','C','D'].forEach(function(l) {
+      const b = document.getElementById('opt'+l);
+      if (b) { b.classList.remove('selected','correct','wrong'); }
+    });
+    document.getElementById('statusArea').innerHTML =
+      '<div class="error-msg">Error submitting answer. Please try again.</div>';
+    startTimer();
   }
 }
 
@@ -372,19 +321,16 @@ function nextQuestion() {
   if (currentIdx < questions.length) {
     showQuestion(currentIdx);
   } else {
-    // Load more questions
     loadQuestions();
   }
 }
-
-// ── Timer ─────────────────────────────────────────────────────
 
 function startTimer() {
   clearInterval(timerInterval);
   timeLeft      = 60;
   questionStart = Date.now();
   updateTimer();
-  timerInterval = setInterval(() => {
+  timerInterval = setInterval(function() {
     timeLeft--;
     updateTimer();
     if (timeLeft <= 0) {
@@ -397,37 +343,41 @@ function startTimer() {
 function updateTimer() {
   const el   = document.getElementById('timerNum');
   const fill = document.getElementById('timerFill');
-  el.textContent   = timeLeft;
+  if (!el) return;
+  el.textContent = timeLeft;
   fill.style.width = (timeLeft/60*100) + '%';
-  fill.style.background = timeLeft > 20 ? '#1a56db' : timeLeft > 10 ? '#d97706' : '#dc2626';
-  el.style.color        = timeLeft > 20 ? '#0f172a' : timeLeft > 10 ? '#d97706' : '#dc2626';
+  const col = timeLeft > 20 ? '#1a56db' : timeLeft > 10 ? '#d97706' : '#dc2626';
+  fill.style.background = col;
+  el.style.color        = timeLeft > 20 ? '#0f172a' : col;
 }
 
-// ── Complete ──────────────────────────────────────────────────
-
 async function completeSession() {
-  const totalSecs = Math.round((Date.now() - questionStart) / 1000);
-  const res = await fetch('/api/session/complete', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({session_id: sessionId, total_secs: totalSecs})
-  });
-  const data = await res.json();
-
-  const pct = total ? Math.round(correct/total*100) : 0;
-  document.getElementById('ovScore').textContent = `${correct}/${total} correct (${pct}%)`;
-  document.getElementById('ovRank').textContent  = data.rank ? `Rank #${data.rank}` : '';
-  document.getElementById('ovPct').textContent   = data.percentile ? `Top ${100-data.percentile}% of all users` : '';
-  document.getElementById('overlay').className   = 'overlay show';
+  clearInterval(timerInterval);
+  try {
+    const res  = await fetch('/api/session/complete', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id: sessionId, total_secs: totalCount * 30})
+    });
+    const data = await res.json();
+    const pct  = totalCount ? Math.round(correctCount/totalCount*100) : 0;
+    document.getElementById('ovScore').textContent = correctCount + '/' + totalCount + ' correct (' + pct + '%)';
+    document.getElementById('ovRank').textContent  = data.rank ? 'Rank #' + data.rank : '';
+    document.getElementById('overlay').className   = 'overlay show';
+  } catch(e) {
+    document.getElementById('ovScore').textContent = correctCount + '/' + totalCount + ' correct';
+    document.getElementById('overlay').className   = 'overlay show';
+  }
 }
 
 function showError(msg) {
-  document.getElementById('loadingCard').innerHTML =
-    `<div style="color:#dc2626;font-size:.88rem;text-align:center;padding:8px">${msg}</div>
-     <a href="/exam/${EXAM_ID}" style="display:block;text-align:center;margin-top:12px;color:#1a56db;font-size:.85rem">Go back</a>`;
+  document.getElementById('loadingCard').style.display = 'none';
+  document.getElementById('statusArea').innerHTML = '<div class="error-msg">' + msg + '</div>';
 }
 
-function esc(t) { return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 </script>
 </body>
-                                     </html>
+  </html>
