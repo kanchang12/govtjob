@@ -131,7 +131,12 @@ def exam_page(exam_id):
     exam     = get_exam(exam_id)
     subjects = [s for s in CURRICULUM["subjects"] if exam_id in s.get("exams",[])]
     sub      = get_subscription(uid)
-    return render_template("exam.html", exam=exam, subjects=subjects,
+    stats    = {}
+    for s in subjects:
+        for t in s.get("topics", []):
+            stat = db.table("topic_stats").select("*")                     .eq("user_id", uid).eq("exam_id", exam_id)                     .eq("subject_id", s["id"]).eq("topic_id", t["id"])                     .execute()
+            stats[t["id"]] = stat.data[0] if stat.data else None
+    return render_template("exam.html", exam=exam, subjects=subjects, stats=stats,
         display_name=session.get("display_name",""), tier=sub.get("tier","free"))
 
 @app.route("/practice/<exam_id>/<subject_id>/<topic_id>")
@@ -638,4 +643,4 @@ def admin_questions():
         questions=q.data or [], exams=CURRICULUM["exams"])
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=8080)
